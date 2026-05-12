@@ -278,14 +278,25 @@
       }
     }
 
+    function forceRecoverLayout() {
+      rotateWrap.style.left = "";
+      rotateWrap.style.top = "";
+      rotateWrap.style.width = "";
+      rotateWrap.style.height = "";
+      document.body.classList.remove("layout-css90");
+      syncCanvas16InsideWrap();
+      notifyUnityResizeSoon();
+      setTimeout(function () { syncCss90Layout(); notifyUnityResizeSoon(); }, 120);
+      setTimeout(function () { syncCss90Layout(); notifyUnityResizeSoon(); }, 360);
+    }
+
     function startKeyboardSafeMode() {
       if (!unityReady) return;
       // fullscreen/orientation lock은 모바일 TMP 키보드를 끊는 케이스가 있어 사용하지 않는다.
       useCss90Portrait = false;
       landscapeGateDismissed = true;
       gate.classList.remove("visible");
-      syncCss90Layout();
-      notifyUnityResizeSoon();
+      forceRecoverLayout();
     }
 
     if (gateBtn) {
@@ -332,7 +343,10 @@
       createUnityInstance(canvas, config, function () {}).then(function (unityInstance) {
         unityInstanceRef = unityInstance;
         unityReady = true;
-        if (gateBtn) gateBtn.disabled = false;
+        if (gateBtn) {
+          gateBtn.disabled = false;
+          gateBtn.textContent = "키보드 우선 모드로 시작 / 화면 복구";
+        }
         updateLandscapeGateVisibility();
 
         var fixFocus = function () {
