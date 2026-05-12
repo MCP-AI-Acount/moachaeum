@@ -130,6 +130,10 @@
       cursor: pointer;
       touch-action: manipulation;
     }
+    #tap-landscape-gate button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
     #tap-landscape-gate .sub {
       font-size: 14px;
       opacity: 0.85;
@@ -140,10 +144,10 @@
 </head>
 <body>
   <div id="tap-landscape-gate" aria-live="polite">
-    <div class="sub">가로 화면이 가장 안정적입니다. 아래를 누르면 전체 화면 후 가로로 잠급니다(Android Chrome 권장).</div>
-    <button type="button" id="tap-landscape-btn">전체 화면 · 가로로 시작</button>
+    <div class="sub">가로 기준(비회전)으로 시작합니다. 입력 안정성이 높습니다.</div>
+    <button type="button" id="tap-landscape-btn" disabled>가로 기준으로 시작</button>
     <div class="sub">계속 세로로 쓰려면 닫기 — CSS 90° 모드로 돌아갑니다.</div>
-    <button type="button" id="tap-landscape-dismiss" style="background:#444">닫기 (세로·CSS90)</button>
+    <button type="button" id="tap-landscape-dismiss" style="background:#444" disabled>닫기 (세로·CSS90)</button>
   </div>
   <div id="unity-rotate-wrap">
     <div id="unity-container">
@@ -153,7 +157,7 @@
   <div id="rotate-hint">가로로 보려면 기기를 돌리거나 위 버튼을 사용하세요</div>
   <script>
     var qs = location.search || "";
-    var useCss90Portrait = !/[?&]css90=0(?:&|$)/.test(qs);
+    var useCss90Portrait = /[?&]css90=1(?:&|$)/.test(qs);
     var skipLandscapeGate = /[?&]nogate=1(?:&|$)/.test(qs);
     if (/[?&]rot=90(?:&|$)/.test(qs)) {
       document.documentElement.style.setProperty("--unity-rot", "90deg");
@@ -188,6 +192,8 @@
 
     var landscapeGateDismissed = false;
     var unityInstanceRef = null;
+    var unityReady = false;
+    var selectedMode = null; // "landscape" | "css90" | null
 
     function isPortraitViewport() {
       return window.innerHeight > window.innerWidth;
@@ -257,6 +263,13 @@
     }
 
     function syncCss90Layout() {
+      if (!selectedMode && !skipLandscapeGate) {
+        document.body.classList.remove("layout-css90");
+        applyCss90Metrics();
+        updateRotateHint();
+        updateLandscapeGateVisibility();
+        return;
+      }
       if (useCss90Portrait && isPortraitViewport()) {
         document.body.classList.add("layout-css90");
       } else {
@@ -296,65 +309,51 @@
         gate.classList.remove("visible");
       }
     }
-
-    function requestFs(el) {
-      var e = el || document.documentElement;
-      if (e.requestFullscreen) return e.requestFullscreen();
-      if (e.webkitRequestFullscreen) return e.webkitRequestFullscreen();
-      if (e.msRequestFullscreen) return e.msRequestFullscreen();
-      return Promise.reject(new Error("no fullscreen"));
-    }
-
-    function tryLockLandscapeAfterFs() {
-      var o = screen.orientation || screen.mozOrientation;
-      if (!o || !o.lock) return Promise.resolve();
-      return o.lock("landscape-primary").catch(function () {
-        return o.lock("landscape").catch(function () {});
-      });
-    }
-
-    function tryEnterLandscapeFromGate() {
-      requestFs(document.documentElement).then(function () {
-        return tryLockLandscapeAfterFs();
-      }).then(function () {
-        landscapeGateDismissed = true;
-        gate.classList.remove("visible");
-        syncCss90Layout();
-        notifyUnityResizeSoon();
-      }).catch(function () {
-        landscapeGateDismissed = true;
-        gate.classList.remove("visible");
-        syncCss90Layout();
-        notifyUnityResizeSoon();
-      });
+    function applyGateMode(mode) {
+      if (!unityReady) return;
+      selectedMode = mode;
+      useCss90Portrait = (mode === "css90");
+      landscapeGateDismissed = true;
+      gate.classList.remove("visible");
+      syncCss90Layout();
+      notifyUnityResizeSoon();
     }
 
     if (gateBtn) {
       gateBtn.addEventListener("click", function (ev) {
         ev.preventDefault();
         ev.stopPropagation();
-        tryEnterLandscapeFromGate();
+        applyGateMode("landscape");
       });
     }
     if (gateDismiss) {
       gateDismiss.addEventListener("click", function (ev) {
         ev.preventDefault();
         ev.stopPropagation();
-        landscapeGateDismissed = true;
-        gate.classList.remove("visible");
-        syncCss90Layout();
-        notifyUnityResizeSoon();
+        applyGateMode("css90");
       });
     }
 
-    function onFsChange() {
+    syncCss90Layout();
+    document.addEventListener("visibilitychange", function () {
+      if (document.hidden) return;
+      if (!selectedMode && !skipLandscapeGate) {
+        landscapeGateDismissed = false;
+      }
       syncCss90Layout();
       notifyUnityResizeSoon();
-    }
-    document.addEventListener("fullscreenchange", onFsChange);
-    document.addEventListener("webkitfullscreenchange", onFsChange);
-
-    syncCss90Layout();
+    });
+    window.addEventListener("pageshow", function () {
+      if (!selectedMode && !skipLandscapeGate) {
+        landscapeGateDismissed = false;
+      }
+      syncCss90Layout();
+      notifyUnityResizeSoon();
+    });
+    window.addEventListener("focus", function () {
+      syncCss90Layout();
+      notifyUnityResizeSoon();
+    });
     window.addEventListener("resize", syncCss90Layout);
     window.addEventListener("orientationchange", function () {
       setTimeout(syncCss90Layout, 200);
@@ -363,23 +362,17 @@
       window.visualViewport.addEventListener("resize", syncCss90Layout);
     }
 
-    function tryLockLandscape() {
-      if (document.body.classList.contains("layout-css90")) return;
-      var o = screen.orientation;
-      if (o && o.lock) {
-        o.lock("landscape").catch(function () {});
-      }
-    }
-
     var script = document.createElement("script");
     script.src = loaderUrl;
     script.onload = function () {
       createUnityInstance(canvas, config, function () {}).then(function (unityInstance) {
         unityInstanceRef = unityInstance;
+        unityReady = true;
+        if (gateBtn) gateBtn.disabled = false;
+        if (gateDismiss) gateDismiss.disabled = false;
         updateLandscapeGateVisibility();
 
         var fixFocus = function () {
-          tryLockLandscape();
           applyCss90Metrics();
           notifyUnityResizeSoon();
         };
