@@ -120,10 +120,6 @@
     #tap-landscape-gate.visible {
       display: flex;
     }
-    #unity-rotate-wrap.blocked {
-      pointer-events: none;
-      visibility: hidden;
-    }
     #tap-landscape-gate button {
       font-size: 18px;
       padding: 14px 22px;
@@ -144,9 +140,10 @@
 </head>
 <body>
   <div id="tap-landscape-gate" aria-live="polite">
-    <div class="sub">권장: 키보드 우선 모드(회전/가로잠금 없음). 입력 안정성이 가장 좋습니다.</div>
-    <button type="button" id="tap-landscape-btn">시작하기 (화면 맞춤)</button>
-    <div class="sub">로딩 완료 후 배경을 터치해도 같은 모드로 자동 시작됩니다.</div>
+    <div class="sub">가로 화면이 가장 안정적입니다. 아래를 누르면 전체 화면 후 가로로 잠급니다(Android Chrome 권장).</div>
+    <button type="button" id="tap-landscape-btn">전체 화면 · 가로로 시작</button>
+    <div class="sub">계속 세로로 쓰려면 닫기 — CSS 90° 모드로 돌아갑니다.</div>
+    <button type="button" id="tap-landscape-dismiss" style="background:#444">닫기 (세로·CSS90)</button>
   </div>
   <div id="unity-rotate-wrap">
     <div id="unity-container">
@@ -156,25 +153,22 @@
   <div id="rotate-hint">가로로 보려면 기기를 돌리거나 위 버튼을 사용하세요</div>
   <script>
     var qs = location.search || "";
-    // 기본은 비회전(키보드 안정 경로). 회전 실험이 필요할 때만 ?css90=1
-    var useCss90Portrait = /[?&]css90=1(?:&|$)/.test(qs);
+    var useCss90Portrait = !/[?&]css90=0(?:&|$)/.test(qs);
     var skipLandscapeGate = /[?&]nogate=1(?:&|$)/.test(qs);
     if (/[?&]rot=90(?:&|$)/.test(qs)) {
       document.documentElement.style.setProperty("--unity-rot", "90deg");
     }
 
     var buildUrl = "Build";
-    var vMatch = /[?&]v=([^&]+)/.exec(location.search || "");
-    var cacheBust = vMatch ? ("?v=" + encodeURIComponent(vMatch[1])) : "";
-    var loaderUrl = buildUrl + "/Re_Web_59.loader.js" + cacheBust;
+    var loaderUrl = buildUrl + "/Re_Web_59.loader.js";
 
     var dpr = window.devicePixelRatio || 1;
     if (dpr > 2) dpr = 2;
 
     var config = {
-      dataUrl: buildUrl + "/Re_Web_59.data" + cacheBust,
-      frameworkUrl: buildUrl + "/Re_Web_59.framework.js" + cacheBust,
-      codeUrl: buildUrl + "/Re_Web_59.wasm" + cacheBust,
+      dataUrl: buildUrl + "/Re_Web_59.data",
+      frameworkUrl: buildUrl + "/Re_Web_59.framework.js",
+      codeUrl: buildUrl + "/Re_Web_59.wasm",
       streamingAssetsUrl: "StreamingAssets",
       companyName: "DefaultCompany",
       productName: "모아채움",
@@ -188,9 +182,9 @@
     var rotateWrap = document.querySelector("#unity-rotate-wrap");
     var gate = document.querySelector("#tap-landscape-gate");
     var gateBtn = document.querySelector("#tap-landscape-btn");
+    var gateDismiss = document.querySelector("#tap-landscape-dismiss");
 
     var landscapeGateDismissed = false;
-    var unityReady = false;
     var unityInstanceRef = null;
 
     function isPortraitViewport() {
@@ -218,11 +212,30 @@
 
     function syncCanvas16InsideWrap() {
       if (!rotateWrap || !canvas) return;
-      // 템플릿에서 16:9 강제를 하면 기기별로 찌그러짐/좌표 오차가 커진다.
-      canvas.style.width = "100%";
-      canvas.style.height = "100%";
-      canvas.style.maxWidth = "none";
-      canvas.style.maxHeight = "none";
+      if (!document.body.classList.contains("layout-css90")) {
+        canvas.style.width = "";
+        canvas.style.height = "";
+        canvas.style.maxWidth = "";
+        canvas.style.maxHeight = "";
+        return;
+      }
+      var ww = rotateWrap.clientWidth;
+      var wh = rotateWrap.clientHeight;
+      if (ww < 2 || wh < 2) return;
+      var ar = 16 / 9;
+      var cw;
+      var ch;
+      if (ww / wh > ar) {
+        ch = wh;
+        cw = Math.floor(ch * ar);
+      } else {
+        cw = ww;
+        ch = Math.floor(cw / ar);
+      }
+      canvas.style.width = cw + "px";
+      canvas.style.height = ch + "px";
+      canvas.style.maxWidth = "100%";
+      canvas.style.maxHeight = "100%";
     }
 
     function applyCss90Metrics() {
@@ -261,92 +274,99 @@
       hint.style.display = isPortraitViewport() ? "block" : "none";
     }
 
+    function isDocFullscreen() {
+      return !!(
+        document.fullscreenElement ||
+        document.webkitFullscreenElement ||
+        document.msFullscreenElement
+      );
+    }
+
     function updateLandscapeGateVisibility() {
       if (!gate) return;
       if (skipLandscapeGate || landscapeGateDismissed) {
         gate.classList.remove("visible");
-        rotateWrap.classList.remove("blocked");
-        rotateWrap.style.visibility = "";
         return;
       }
-      gate.classList.add("visible");
-      rotateWrap.classList.add("blocked");
-      rotateWrap.style.visibility = "hidden";
-    }
-
-    function forceRecoverLayout() {
-      rotateWrap.style.left = "";
-      rotateWrap.style.top = "";
-      rotateWrap.style.width = "";
-      rotateWrap.style.height = "";
-      document.body.classList.remove("layout-css90");
-      syncCanvas16InsideWrap();
-      notifyUnityResizeSoon();
-      setTimeout(function () { syncCss90Layout(); notifyUnityResizeSoon(); }, 120);
-      setTimeout(function () { syncCss90Layout(); notifyUnityResizeSoon(); }, 360);
-    }
-
-    function startKeyboardSafeMode() {
-      if (!unityReady) return;
-      // fullscreen/orientation lock은 모바일 TMP 키보드를 끊는 케이스가 있어 사용하지 않는다.
-      useCss90Portrait = false;
-      landscapeGateDismissed = true;
-      gate.classList.remove("visible");
-      rotateWrap.classList.remove("blocked");
-      rotateWrap.style.visibility = "";
-      forceRecoverLayout();
-    }
-
-    var gateTapLock = false;
-    function onGateConfirm(ev) {
-      if (ev) {
-        ev.preventDefault();
-        ev.stopPropagation();
+      if (isPortraitViewport() && !isDocFullscreen()) {
+        gate.classList.add("visible");
+      } else {
+        gate.classList.remove("visible");
       }
-      if (gateTapLock) return;
-      if (!unityReady) {
-        if (gateBtn) gateBtn.textContent = "로딩 중… 잠시 후 다시 눌러 주세요";
-        return;
-      }
-      gateTapLock = true;
-      startKeyboardSafeMode();
-      setTimeout(function () { gateTapLock = false; }, 600);
+    }
+
+    function requestFs(el) {
+      var e = el || document.documentElement;
+      if (e.requestFullscreen) return e.requestFullscreen();
+      if (e.webkitRequestFullscreen) return e.webkitRequestFullscreen();
+      if (e.msRequestFullscreen) return e.msRequestFullscreen();
+      return Promise.reject(new Error("no fullscreen"));
+    }
+
+    function tryLockLandscapeAfterFs() {
+      var o = screen.orientation || screen.mozOrientation;
+      if (!o || !o.lock) return Promise.resolve();
+      return o.lock("landscape-primary").catch(function () {
+        return o.lock("landscape").catch(function () {});
+      });
+    }
+
+    function tryEnterLandscapeFromGate() {
+      requestFs(document.documentElement).then(function () {
+        return tryLockLandscapeAfterFs();
+      }).then(function () {
+        landscapeGateDismissed = true;
+        gate.classList.remove("visible");
+        syncCss90Layout();
+        notifyUnityResizeSoon();
+      }).catch(function () {
+        landscapeGateDismissed = true;
+        gate.classList.remove("visible");
+        syncCss90Layout();
+        notifyUnityResizeSoon();
+      });
     }
 
     if (gateBtn) {
-      gateBtn.addEventListener("click", onGateConfirm);
-      gateBtn.addEventListener("touchend", function (ev) {
-        onGateConfirm(ev);
-      }, { passive: false });
+      gateBtn.addEventListener("click", function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        tryEnterLandscapeFromGate();
+      });
     }
-    if (gate) {
-      gate.addEventListener("pointerdown", function (ev) {
-        if (ev.target !== gate) return;
-        onGateConfirm(ev);
-      }, { passive: false });
+    if (gateDismiss) {
+      gateDismiss.addEventListener("click", function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        landscapeGateDismissed = true;
+        gate.classList.remove("visible");
+        syncCss90Layout();
+        notifyUnityResizeSoon();
+      });
     }
 
-    function isTextEntryActive() {
-      var el = document.activeElement;
-      if (!el) return false;
-      var tag = (el.tagName || "").toUpperCase();
-      if (tag === "INPUT" || tag === "TEXTAREA") return true;
-      return !!el.isContentEditable;
+    function onFsChange() {
+      syncCss90Layout();
+      notifyUnityResizeSoon();
     }
+    document.addEventListener("fullscreenchange", onFsChange);
+    document.addEventListener("webkitfullscreenchange", onFsChange);
 
     syncCss90Layout();
-    window.addEventListener("resize", function () {
-      if (isTextEntryActive()) return;
-      syncCss90Layout();
-    });
+    window.addEventListener("resize", syncCss90Layout);
     window.addEventListener("orientationchange", function () {
       setTimeout(syncCss90Layout, 200);
     });
     if (window.visualViewport) {
-      window.visualViewport.addEventListener("resize", function () {
-        if (isTextEntryActive()) return;
-        syncCss90Layout();
-      });
+      window.visualViewport.addEventListener("resize", syncCss90Layout);
+    }
+
+    function tryLockLandscape() {
+      if (document.body.classList.contains("layout-css90")) return;
+      var o = screen.orientation;
+      if (o && o.lock) {
+        o.lock("landscape").catch(function () {});
+      }
     }
 
     var script = document.createElement("script");
@@ -354,13 +374,10 @@
     script.onload = function () {
       createUnityInstance(canvas, config, function () {}).then(function (unityInstance) {
         unityInstanceRef = unityInstance;
-        unityReady = true;
-        if (gateBtn) {
-          gateBtn.textContent = "시작하기 (화면 맞춤)";
-        }
         updateLandscapeGateVisibility();
 
         var fixFocus = function () {
+          tryLockLandscape();
           applyCss90Metrics();
           notifyUnityResizeSoon();
         };
