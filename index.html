@@ -172,7 +172,8 @@
       companyName: "DefaultCompany",
       productName: "모아채움",
       productVersion: "1.0",
-      matchWebGLToCanvasSize: false,
+      // 수동 canvas.width/height와 false 조합은 WebGL에서 포인터·TMP 키보드 좌표가 어긋나기 쉬움 → Unity가 CSS 표시 크기에 맞춤
+      matchWebGLToCanvasSize: true,
       devicePixelRatio: dpr
     };
 
@@ -239,10 +240,6 @@
       canvas.style.height = fitted.height + "px";
       canvas.style.maxWidth = "none";
       canvas.style.maxHeight = "none";
-      var targetBufferW = Math.max(1, Math.round(fitted.width * dpr));
-      var targetBufferH = Math.max(1, Math.round(fitted.height * dpr));
-      if (canvas.width !== targetBufferW) canvas.width = targetBufferW;
-      if (canvas.height !== targetBufferH) canvas.height = targetBufferH;
     }
 
     function applyCss90Metrics() {
@@ -327,15 +324,13 @@
           setTimeout(function () { bumpLayout("delayed-" + ms); }, ms);
         });
 
-        var fixFocus = function (ev) {
+        var fixFocus = function () {
           window.focus();
-          // 모바일 WebGL: canvas.focus()는 브라우저 가상 키보드(TMP_InputField) 포커스를 가로챌 수 있음 → 터치에서는 생략
-          if (!ev || ev.type !== "touchstart")
-            canvas.focus();
+          canvas.focus();
           applyCss90Metrics();
           notifyUnityResizeSoon();
         };
-        canvas.addEventListener("touchstart", fixFocus, { passive: true });
+        canvas.addEventListener("touchstart", fixFocus, { passive: false });
         canvas.addEventListener("mousedown", fixFocus);
         if (typeof ResizeObserver !== "undefined" && rotateWrap) {
           var ro = new ResizeObserver(function () {
