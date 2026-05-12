@@ -122,6 +122,7 @@
     }
     #unity-rotate-wrap.blocked {
       pointer-events: none;
+      visibility: hidden;
     }
     #tap-landscape-gate button {
       font-size: 18px;
@@ -144,7 +145,7 @@
 <body>
   <div id="tap-landscape-gate" aria-live="polite">
     <div class="sub">권장: 키보드 우선 모드(회전/가로잠금 없음). 입력 안정성이 가장 좋습니다.</div>
-    <button type="button" id="tap-landscape-btn" disabled>키보드 우선 모드로 시작</button>
+    <button type="button" id="tap-landscape-btn">시작하기 (화면 맞춤)</button>
     <div class="sub">로딩 완료 후 배경을 터치해도 같은 모드로 자동 시작됩니다.</div>
   </div>
   <div id="unity-rotate-wrap">
@@ -265,10 +266,12 @@
       if (skipLandscapeGate || landscapeGateDismissed) {
         gate.classList.remove("visible");
         rotateWrap.classList.remove("blocked");
+        rotateWrap.style.visibility = "";
         return;
       }
       gate.classList.add("visible");
       rotateWrap.classList.add("blocked");
+      rotateWrap.style.visibility = "hidden";
     }
 
     function forceRecoverLayout() {
@@ -290,22 +293,37 @@
       landscapeGateDismissed = true;
       gate.classList.remove("visible");
       rotateWrap.classList.remove("blocked");
+      rotateWrap.style.visibility = "";
       forceRecoverLayout();
     }
 
-    if (gateBtn) {
-      gateBtn.addEventListener("click", function (ev) {
+    var gateTapLock = false;
+    function onGateConfirm(ev) {
+      if (ev) {
         ev.preventDefault();
         ev.stopPropagation();
-        startKeyboardSafeMode();
-      });
+      }
+      if (gateTapLock) return;
+      if (!unityReady) {
+        if (gateBtn) gateBtn.textContent = "로딩 중… 잠시 후 다시 눌러 주세요";
+        return;
+      }
+      gateTapLock = true;
+      startKeyboardSafeMode();
+      setTimeout(function () { gateTapLock = false; }, 600);
+    }
+
+    if (gateBtn) {
+      gateBtn.addEventListener("click", onGateConfirm);
+      gateBtn.addEventListener("touchend", function (ev) {
+        onGateConfirm(ev);
+      }, { passive: false });
     }
     if (gate) {
       gate.addEventListener("pointerdown", function (ev) {
-        if (!unityReady) return;
         if (ev.target !== gate) return;
-        startKeyboardSafeMode();
-      }, { passive: true });
+        onGateConfirm(ev);
+      }, { passive: false });
     }
 
     function isTextEntryActive() {
@@ -338,8 +356,7 @@
         unityInstanceRef = unityInstance;
         unityReady = true;
         if (gateBtn) {
-          gateBtn.disabled = false;
-          gateBtn.textContent = "키보드 우선 모드로 시작 / 화면 복구";
+          gateBtn.textContent = "시작하기 (화면 맞춤)";
         }
         updateLandscapeGateVisibility();
 
