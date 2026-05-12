@@ -10,8 +10,8 @@
     html, body {
       margin: 0;
       padding: 0;
-      width: 100dvw;
-      height: 100dvh;
+      width: 100%;
+      height: 100%;
       overflow: hidden;
       position: fixed;
       left: 0;
@@ -64,8 +64,8 @@
       to { transform: rotate(360deg); }
     }
     #unity-rotate-wrap {
-      width: 100dvw;
-      height: 100dvh;
+      width: 100%;
+      height: 100%;
       position: fixed;
       left: 0;
       top: 0;
@@ -200,7 +200,6 @@
     var unityContainer = document.querySelector("#unity-container");
     var loadingEl = document.querySelector("#webgl-loading");
     var unityInstanceRef = null;
-    var fullscreenLandscapeAttempted = false;
     var TARGET_ASPECT = 16 / 9;
 
     /** 주소창/툴바로 inner*가 흔들릴 때 대비 (없으면 inner 사용) */
@@ -262,69 +261,11 @@
       }, 400);
     }
 
-    function tryEnterFullscreenFromGesture() {
-      if (fullscreenLandscapeAttempted) return;
-      fullscreenLandscapeAttempted = true;
-      var el = document.documentElement;
-      var req = el.requestFullscreen || el.webkitRequestFullscreen;
-      if (!req) return;
-      try {
-        var p = req.call(el);
-        if (p && typeof p.then === "function") {
-          p.then(function () {
-            if (screen.orientation && screen.orientation.lock) {
-              screen.orientation.lock("portrait").catch(function () {});
-            }
-          }).catch(function () {});
-        }
-      } catch (_e) {}
-    }
-
-    function getAspectFittedSize(containerW, containerH, targetAspect) {
-      if (containerW <= 0 || containerH <= 0) {
-        return { width: 0, height: 0 };
-      }
-      var width = containerW;
-      var height = width / targetAspect;
-      if (height > containerH) {
-        height = containerH;
-        width = height * targetAspect;
-      }
-      return {
-        width: Math.max(1, Math.round(width)),
-        height: Math.max(1, Math.round(height))
-      };
-    }
-
     function syncCanvas16InsideWrap() {
       if (!rotateWrap || !canvas) return;
-      var wrapW;
-      var wrapH;
-      if (document.body.classList.contains("layout-css90")) {
-        var vp = readViewportCssPixels();
-        var iw = vp.w;
-        var ih = vp.h;
-        if (ih < iw) {
-          var t = ih;
-          ih = iw;
-          iw = t;
-        }
-        wrapW = ih;
-        wrapH = iw;
-      } else {
-        var sizeBox = rotateWrap;
-        wrapW = sizeBox.clientWidth || window.innerWidth || 0;
-        wrapH = sizeBox.clientHeight || window.innerHeight || 0;
-        // 기본(비회전) 경로에서는 16:9 강제를 하지 않는다. (모바일 찌그러짐/축소 방지)
-        canvas.style.width = "100%";
-        canvas.style.height = "100%";
-        canvas.style.maxWidth = "none";
-        canvas.style.maxHeight = "none";
-        return;
-      }
-      var fitted = getAspectFittedSize(wrapW, wrapH, TARGET_ASPECT);
-      canvas.style.width = fitted.width + "px";
-      canvas.style.height = fitted.height + "px";
+      // 화면 찌그러짐 방지: 템플릿에서 16:9 강제하지 않고 전체 박스를 채운다.
+      canvas.style.width = "100%";
+      canvas.style.height = "100%";
       canvas.style.maxWidth = "none";
       canvas.style.maxHeight = "none";
     }
@@ -378,7 +319,7 @@
     }
 
     function syncCss90Layout() {
-      if (useCss90Portrait && isPortraitViewport()) {
+      if (useCss90Portrait) {
         document.body.classList.add("layout-css90");
       } else {
         document.body.classList.remove("layout-css90");
@@ -403,7 +344,6 @@
     });
 
     document.addEventListener("pointerdown", function onFirstTouch() {
-      tryEnterFullscreenFromGesture();
       bumpLayout("first-touch");
     }, { passive: true, capture: true, once: true });
 
@@ -447,7 +387,6 @@
         // touchstart에서 canvas/window에 포커스를 주면, 같은 제스처로 TMP가 연 브라우저 숨김 input의
         // 포커스를 뺏어 모바일 소프트 키보드가 안 뜨는 경우가 많음. 레이아웃만 동기화한다.
         var syncLayoutFromCanvasPointer = function () {
-          tryEnterFullscreenFromGesture();
           applyCss90Metrics();
           notifyUnityResizeSoon();
         };
