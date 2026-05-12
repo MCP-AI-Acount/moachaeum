@@ -114,11 +114,11 @@
       pointer-events: auto;
     }
     body.layout-css90 #unity-container {
+      /* width/height는 JS로만 지정. auto는 flex 자식이 캔버스 초기 크기에 맞춰 줄어들어 16:9 계산이 망가짐 */
       position: relative;
       left: auto;
       top: auto;
-      width: auto;
-      height: auto;
+      flex-shrink: 0;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -245,11 +245,19 @@
 
     function syncCanvas16InsideWrap() {
       if (!rotateWrap || !canvas) return;
-      var sizeBox = document.body.classList.contains("layout-css90") && unityContainer
-        ? unityContainer
-        : rotateWrap;
-      var wrapW = sizeBox.clientWidth || window.innerWidth || 0;
-      var wrapH = sizeBox.clientHeight || window.innerHeight || 0;
+      var wrapW;
+      var wrapH;
+      if (document.body.classList.contains("layout-css90")) {
+        /* clientWidth는 transform/레이아웃 타이밍에 0·과소값이 나올 수 있음 → 논리 가로 박스와 동일하게 */
+        var iw = window.innerWidth || 0;
+        var ih = window.innerHeight || 0;
+        wrapW = ih;
+        wrapH = iw;
+      } else {
+        var sizeBox = rotateWrap;
+        wrapW = sizeBox.clientWidth || window.innerWidth || 0;
+        wrapH = sizeBox.clientHeight || window.innerHeight || 0;
+      }
       var fitted = getAspectFittedSize(wrapW, wrapH, TARGET_ASPECT);
       canvas.style.width = fitted.width + "px";
       canvas.style.height = fitted.height + "px";
