@@ -172,8 +172,8 @@
       companyName: "DefaultCompany",
       productName: "모아채움",
       productVersion: "1.0",
-      // 수동 canvas.width/height와 false 조합은 WebGL에서 포인터·TMP 키보드 좌표가 어긋나기 쉬움 → Unity가 CSS 표시 크기에 맞춤
-      matchWebGLToCanvasSize: true,
+      // CSS로 16:9 박스를 맞추고, 픽셀 버퍼는 아래에서 수동 동기 → 찌그러짐 방지. Unity 자동 맞춤은 이 조합과 충돌하기 쉬움.
+      matchWebGLToCanvasSize: false,
       devicePixelRatio: dpr
     };
 
@@ -240,6 +240,10 @@
       canvas.style.height = fitted.height + "px";
       canvas.style.maxWidth = "none";
       canvas.style.maxHeight = "none";
+      var targetBufferW = Math.max(1, Math.round(fitted.width * dpr));
+      var targetBufferH = Math.max(1, Math.round(fitted.height * dpr));
+      if (canvas.width !== targetBufferW) canvas.width = targetBufferW;
+      if (canvas.height !== targetBufferH) canvas.height = targetBufferH;
     }
 
     function applyCss90Metrics() {
