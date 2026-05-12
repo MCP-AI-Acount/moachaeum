@@ -10,8 +10,8 @@
     html, body {
       margin: 0;
       padding: 0;
-      width: 100%;
-      height: 100%;
+      width: 100dvw;
+      height: 100dvh;
       overflow: hidden;
       position: fixed;
       left: 0;
@@ -64,8 +64,8 @@
       to { transform: rotate(360deg); }
     }
     #unity-rotate-wrap {
-      width: 100%;
-      height: 100%;
+      width: 100dvw;
+      height: 100dvh;
       position: fixed;
       left: 0;
       top: 0;
@@ -169,11 +169,11 @@
       <canvas id="unity-canvas" tabindex="0"></canvas>
     </div>
   </div>
-  <div id="rotate-hint">가로로 보려면 기기를 가로로 돌려 주세요</div>
+  <div id="rotate-hint"></div>
   <script>
     var qs = location.search || "";
-    // 기본값은 비회전(안정 경로). 회전 실험이 필요할 때만 ?css90=1 로 활성화.
-    var useCss90Portrait = /[?&]css90=1(?:&|$)/.test(qs);
+    // 기본값은 회전 ON. 필요할 때만 ?css90=0 으로 끈다.
+    var useCss90Portrait = !/[?&]css90=0(?:&|$)/.test(qs);
     // 회전값은 고정(-90deg)으로 유지한다. (좌/우 90도 반복 변경 방지)
 
     var buildUrl = "Build";
@@ -208,11 +208,18 @@
     function readViewportCssPixels() {
       var vv = window.visualViewport;
       if (vv && vv.width >= 32 && vv.height >= 32) {
-        return { w: Math.round(vv.width), h: Math.round(vv.height) };
+        return {
+          w: Math.round(vv.width),
+          h: Math.round(vv.height),
+          l: Math.round(vv.offsetLeft || 0),
+          t: Math.round(vv.offsetTop || 0)
+        };
       }
       return {
         w: Math.round(window.innerWidth || document.documentElement.clientWidth || 0),
-        h: Math.round(window.innerHeight || document.documentElement.clientHeight || 0)
+        h: Math.round(window.innerHeight || document.documentElement.clientHeight || 0),
+        l: 0,
+        t: 0
       };
     }
 
@@ -311,6 +318,8 @@
       var iw = vp.w;
       var ih = vp.h;
       if (!document.body.classList.contains("layout-css90")) {
+        rotateWrap.style.left = vp.l + "px";
+        rotateWrap.style.top = vp.t + "px";
         rotateWrap.style.width = iw + "px";
         rotateWrap.style.height = ih + "px";
         if (unityContainer) {
@@ -324,8 +333,10 @@
         syncCanvas16InsideWrap();
         return;
       }
-      rotateWrap.style.width = "100%";
-      rotateWrap.style.height = "100%";
+      rotateWrap.style.left = vp.l + "px";
+      rotateWrap.style.top = vp.t + "px";
+      rotateWrap.style.width = iw + "px";
+      rotateWrap.style.height = ih + "px";
       if (unityContainer) {
         /* dvh/dvw 미지원 브라우저용 폴백 */
         if (typeof CSS === "undefined" || !CSS.supports || !CSS.supports("width", "100dvh")) {
@@ -361,11 +372,7 @@
 
     function updateRotateHint() {
       if (!hint) return;
-      if (document.body.classList.contains("layout-css90")) {
-        hint.style.display = "none";
-        return;
-      }
-      hint.style.display = isPortraitViewport() ? "block" : "none";
+      hint.style.display = "none";
     }
 
     document.addEventListener("visibilitychange", function () {
