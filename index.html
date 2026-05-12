@@ -29,6 +29,7 @@
       position: fixed;
       left: 0;
       top: 0;
+      z-index: 0;
       touch-action: none;
       pointer-events: auto;
       -webkit-tap-highlight-color: transparent;
@@ -103,12 +104,14 @@
       display: none;
       position: fixed;
       inset: 0;
-      z-index: 2147483000;
+      z-index: 2147483646;
       align-items: center;
       justify-content: center;
       flex-direction: column;
       gap: 16px;
       padding: 24px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
       box-sizing: border-box;
       background: rgba(0,0,0,0.72);
       color: #fff;
@@ -139,18 +142,19 @@
   </style>
 </head>
 <body>
-  <div id="tap-landscape-gate" aria-live="polite">
-    <div class="sub">가로 화면이 가장 안정적입니다. 아래를 누르면 전체 화면 후 가로로 잠급니다(Android Chrome 권장).</div>
-    <button type="button" id="tap-landscape-btn">전체 화면 · 가로로 시작</button>
-    <div class="sub">계속 세로로 쓰려면 닫기 — CSS 90° 모드로 돌아갑니다.</div>
-    <button type="button" id="tap-landscape-dismiss" style="background:#444">닫기 (세로·CSS90)</button>
-  </div>
   <div id="unity-rotate-wrap">
     <div id="unity-container">
       <canvas id="unity-canvas" tabindex="-1"></canvas>
     </div>
   </div>
   <div id="rotate-hint">가로로 보려면 기기를 돌리거나 위 버튼을 사용하세요</div>
+  <!-- MobilePortraitWebGL: two-button gate (tap-landscape-btn + tap-landscape-dismiss). body 끝에 두어 캔버스 위에서 터치 수신. 산출물에 없으면 다른 템플릿으로 빌드된 것입니다. -->
+  <div id="tap-landscape-gate" aria-live="polite">
+    <div class="sub">가로 화면이 가장 안정적입니다. 아래를 누르면 전체 화면 후 가로로 잠급니다(Android Chrome 권장).</div>
+    <button type="button" id="tap-landscape-btn">전체 화면 · 가로로 시작</button>
+    <div class="sub">계속 세로로 쓰려면 닫기 — CSS 90° 모드로 돌아갑니다.</div>
+    <button type="button" id="tap-landscape-dismiss" style="background:#444">닫기 (세로·CSS90)</button>
+  </div>
   <script>
     var qs = location.search || "";
     var useCss90Portrait = !/[?&]css90=0(?:&|$)/.test(qs);
@@ -185,6 +189,7 @@
     var gateDismiss = document.querySelector("#tap-landscape-dismiss");
 
     var landscapeGateDismissed = false;
+    var gateFsBusy = false;
     var unityInstanceRef = null;
 
     function isPortraitViewport() {
@@ -286,12 +291,18 @@
       if (!gate) return;
       if (skipLandscapeGate || landscapeGateDismissed) {
         gate.classList.remove("visible");
+        if (rotateWrap) rotateWrap.style.pointerEvents = "";
+        if (canvas) canvas.style.pointerEvents = "";
         return;
       }
       if (isPortraitViewport() && !isDocFullscreen()) {
         gate.classList.add("visible");
+        if (rotateWrap) rotateWrap.style.pointerEvents = "none";
+        if (canvas) canvas.style.pointerEvents = "none";
       } else {
         gate.classList.remove("visible");
+        if (rotateWrap) rotateWrap.style.pointerEvents = "";
+        if (canvas) canvas.style.pointerEvents = "";
       }
     }
 
@@ -312,18 +323,26 @@
     }
 
     function tryEnterLandscapeFromGate() {
+      if (gateFsBusy) return;
+      gateFsBusy = true;
       requestFs(document.documentElement).then(function () {
         return tryLockLandscapeAfterFs();
       }).then(function () {
         landscapeGateDismissed = true;
         gate.classList.remove("visible");
+        if (rotateWrap) rotateWrap.style.pointerEvents = "";
+        if (canvas) canvas.style.pointerEvents = "";
         syncCss90Layout();
         notifyUnityResizeSoon();
       }).catch(function () {
         landscapeGateDismissed = true;
         gate.classList.remove("visible");
+        if (rotateWrap) rotateWrap.style.pointerEvents = "";
+        if (canvas) canvas.style.pointerEvents = "";
         syncCss90Layout();
         notifyUnityResizeSoon();
+      }).then(function () {
+        setTimeout(function () { gateFsBusy = false; }, 700);
       });
     }
 
@@ -333,6 +352,11 @@
         ev.stopPropagation();
         tryEnterLandscapeFromGate();
       });
+      gateBtn.addEventListener("touchend", function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        tryEnterLandscapeFromGate();
+      }, { passive: false });
     }
     if (gateDismiss) {
       gateDismiss.addEventListener("click", function (ev) {
@@ -340,9 +364,21 @@
         ev.stopPropagation();
         landscapeGateDismissed = true;
         gate.classList.remove("visible");
+        if (rotateWrap) rotateWrap.style.pointerEvents = "";
+        if (canvas) canvas.style.pointerEvents = "";
         syncCss90Layout();
         notifyUnityResizeSoon();
       });
+      gateDismiss.addEventListener("touchend", function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        landscapeGateDismissed = true;
+        gate.classList.remove("visible");
+        if (rotateWrap) rotateWrap.style.pointerEvents = "";
+        if (canvas) canvas.style.pointerEvents = "";
+        syncCss90Layout();
+        notifyUnityResizeSoon();
+      }, { passive: false });
     }
 
     function onFsChange() {
