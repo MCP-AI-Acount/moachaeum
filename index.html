@@ -153,7 +153,8 @@
   <div id="rotate-hint">가로로 보려면 기기를 돌리거나 위 버튼을 사용하세요</div>
   <script>
     var qs = location.search || "";
-    var useCss90Portrait = !/[?&]css90=0(?:&|$)/.test(qs);
+    // 기본은 비회전(키보드 안정 경로). 회전 실험이 필요할 때만 ?css90=1
+    var useCss90Portrait = /[?&]css90=1(?:&|$)/.test(qs);
     var skipLandscapeGate = /[?&]nogate=1(?:&|$)/.test(qs);
     if (/[?&]rot=90(?:&|$)/.test(qs)) {
       document.documentElement.style.setProperty("--unity-rot", "90deg");
