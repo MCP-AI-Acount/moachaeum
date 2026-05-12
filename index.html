@@ -120,6 +120,9 @@
     #tap-landscape-gate.visible {
       display: flex;
     }
+    #unity-rotate-wrap.blocked {
+      pointer-events: none;
+    }
     #tap-landscape-gate button {
       font-size: 18px;
       padding: 14px 22px;
@@ -257,25 +260,15 @@
       hint.style.display = isPortraitViewport() ? "block" : "none";
     }
 
-    function isDocFullscreen() {
-      return !!(
-        document.fullscreenElement ||
-        document.webkitFullscreenElement ||
-        document.msFullscreenElement
-      );
-    }
-
     function updateLandscapeGateVisibility() {
       if (!gate) return;
       if (skipLandscapeGate || landscapeGateDismissed) {
         gate.classList.remove("visible");
+        rotateWrap.classList.remove("blocked");
         return;
       }
-      if (isPortraitViewport() && !isDocFullscreen()) {
-        gate.classList.add("visible");
-      } else {
-        gate.classList.remove("visible");
-      }
+      gate.classList.add("visible");
+      rotateWrap.classList.add("blocked");
     }
 
     function forceRecoverLayout() {
@@ -296,6 +289,7 @@
       useCss90Portrait = false;
       landscapeGateDismissed = true;
       gate.classList.remove("visible");
+      rotateWrap.classList.remove("blocked");
       forceRecoverLayout();
     }
 
