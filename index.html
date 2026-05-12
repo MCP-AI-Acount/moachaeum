@@ -140,10 +140,10 @@
 </head>
 <body>
   <div id="tap-landscape-gate" aria-live="polite">
-    <div class="sub">권장: 키보드 우선 모드(회전/가로잠금 없음). 입력 안정성이 가장 좋습니다.</div>
-    <button type="button" id="tap-landscape-btn">키보드 우선 모드로 시작</button>
-    <div class="sub">대안: 세로에서 강제 회전(CSS90). 기기별로 입력 안정성이 떨어질 수 있습니다.</div>
-    <button type="button" id="tap-landscape-dismiss" style="background:#444">세로·회전 모드로 시작</button>
+    <div class="sub">가로 화면이 가장 안정적입니다. 아래를 누르면 전체 화면 후 가로로 잠급니다(Android Chrome 권장).</div>
+    <button type="button" id="tap-landscape-btn">전체 화면 · 가로로 시작</button>
+    <div class="sub">계속 세로로 쓰려면 닫기 — CSS 90° 모드로 돌아갑니다.</div>
+    <button type="button" id="tap-landscape-dismiss" style="background:#444">닫기 (세로·CSS90)</button>
   </div>
   <div id="unity-rotate-wrap">
     <div id="unity-container">
@@ -153,8 +153,7 @@
   <div id="rotate-hint">가로로 보려면 기기를 돌리거나 위 버튼을 사용하세요</div>
   <script>
     var qs = location.search || "";
-    // 기본은 비회전(키보드 안정 경로). 회전 실험이 필요할 때만 ?css90=1
-    var useCss90Portrait = /[?&]css90=1(?:&|$)/.test(qs);
+    var useCss90Portrait = !/[?&]css90=0(?:&|$)/.test(qs);
     var skipLandscapeGate = /[?&]nogate=1(?:&|$)/.test(qs);
     if (/[?&]rot=90(?:&|$)/.test(qs)) {
       document.documentElement.style.setProperty("--unity-rot", "90deg");
@@ -215,11 +214,30 @@
 
     function syncCanvas16InsideWrap() {
       if (!rotateWrap || !canvas) return;
-      // 템플릿에서 16:9 강제를 하면 기기별로 찌그러짐/좌표 오차가 커진다.
-      canvas.style.width = "100%";
-      canvas.style.height = "100%";
-      canvas.style.maxWidth = "none";
-      canvas.style.maxHeight = "none";
+      if (!document.body.classList.contains("layout-css90")) {
+        canvas.style.width = "";
+        canvas.style.height = "";
+        canvas.style.maxWidth = "";
+        canvas.style.maxHeight = "";
+        return;
+      }
+      var ww = rotateWrap.clientWidth;
+      var wh = rotateWrap.clientHeight;
+      if (ww < 2 || wh < 2) return;
+      var ar = 16 / 9;
+      var cw;
+      var ch;
+      if (ww / wh > ar) {
+        ch = wh;
+        cw = Math.floor(ch * ar);
+      } else {
+        cw = ww;
+        ch = Math.floor(cw / ar);
+      }
+      canvas.style.width = cw + "px";
+      canvas.style.height = ch + "px";
+      canvas.style.maxWidth = "100%";
+      canvas.style.maxHeight = "100%";
     }
 
     function applyCss90Metrics() {
@@ -279,27 +297,31 @@
       }
     }
 
-    function startKeyboardSafeMode() {
-      // fullscreen/orientation lock은 모바일 TMP 키보드를 끊는 케이스가 있어 사용하지 않는다.
-      useCss90Portrait = false;
-      landscapeGateDismissed = true;
-      gate.classList.remove("visible");
-      syncCss90Layout();
-      notifyUnityResizeSoon();
+    function requestFs(el) {
+      var e = el || document.documentElement;
+      if (e.requestFullscreen) return e.requestFullscreen();
+      if (e.webkitRequestFullscreen) return e.webkitRequestFullscreen();
+      if (e.msRequestFullscreen) return e.msRequestFullscreen();
+      return Promise.reject(new Error("no fullscreen"));
     }
 
-    if (gateBtn) {
-      gateBtn.addEventListener("click", function (ev) {
-        ev.preventDefault();
-        ev.stopPropagation();
-        startKeyboardSafeMode();
+    function tryLockLandscapeAfterFs() {
+      var o = screen.orientation || screen.mozOrientation;
+      if (!o || !o.lock) return Promise.resolve();
+      return o.lock("landscape-primary").catch(function () {
+        return o.lock("landscape").catch(function () {});
       });
     }
-    if (gateDismiss) {
-      gateDismiss.addEventListener("click", function (ev) {
-        ev.preventDefault();
-        ev.stopPropagation();
-        useCss90Portrait = true;
+
+    function tryEnterLandscapeFromGate() {
+      requestFs(document.documentElement).then(function () {
+        return tryLockLandscapeAfterFs();
+      }).then(function () {
+        landscapeGateDismissed = true;
+        gate.classList.remove("visible");
+        syncCss90Layout();
+        notifyUnityResizeSoon();
+      }).catch(function () {
         landscapeGateDismissed = true;
         gate.classList.remove("visible");
         syncCss90Layout();
@@ -307,27 +329,46 @@
       });
     }
 
-    function isTextEntryActive() {
-      var el = document.activeElement;
-      if (!el) return false;
-      var tag = (el.tagName || "").toUpperCase();
-      if (tag === "INPUT" || tag === "TEXTAREA") return true;
-      return !!el.isContentEditable;
+    if (gateBtn) {
+      gateBtn.addEventListener("click", function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        tryEnterLandscapeFromGate();
+      });
+    }
+    if (gateDismiss) {
+      gateDismiss.addEventListener("click", function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        landscapeGateDismissed = true;
+        gate.classList.remove("visible");
+        syncCss90Layout();
+        notifyUnityResizeSoon();
+      });
     }
 
-    syncCss90Layout();
-    window.addEventListener("resize", function () {
-      if (isTextEntryActive()) return;
+    function onFsChange() {
       syncCss90Layout();
-    });
+      notifyUnityResizeSoon();
+    }
+    document.addEventListener("fullscreenchange", onFsChange);
+    document.addEventListener("webkitfullscreenchange", onFsChange);
+
+    syncCss90Layout();
+    window.addEventListener("resize", syncCss90Layout);
     window.addEventListener("orientationchange", function () {
       setTimeout(syncCss90Layout, 200);
     });
     if (window.visualViewport) {
-      window.visualViewport.addEventListener("resize", function () {
-        if (isTextEntryActive()) return;
-        syncCss90Layout();
-      });
+      window.visualViewport.addEventListener("resize", syncCss90Layout);
+    }
+
+    function tryLockLandscape() {
+      if (document.body.classList.contains("layout-css90")) return;
+      var o = screen.orientation;
+      if (o && o.lock) {
+        o.lock("landscape").catch(function () {});
+      }
     }
 
     var script = document.createElement("script");
@@ -338,6 +379,7 @@
         updateLandscapeGateVisibility();
 
         var fixFocus = function () {
+          tryLockLandscape();
           applyCss90Metrics();
           notifyUnityResizeSoon();
         };
