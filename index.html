@@ -1,11 +1,14 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en-us">
 <head>
   <meta charset="utf-8">
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>모아채움</title>
-  <!-- Unity WebGL 빌드 시 템플릿 매크로만 치환됩니다. 주석에 삼중중괄호 매크로 문법을 넣지 마세요. -->
+  <!--
+    Unity WebGL 빌드 시에만 이 파일의 템플릿 매크로가 실제 값으로 치환됩니다. 배포는 빌드 출력 index.html + Build 폴더를 사용하세요.
+    주석 안에는 삼중 중괄호 매크로 문법을 쓰지 마세요. 전처리기가 빈 식으로 인식해 빌드가 실패합니다.
+  -->
   <style>
     html, body {
       margin: 0;
@@ -16,52 +19,9 @@
       position: fixed;
       left: 0;
       top: 0;
-      background: #7f88cb;
+      background: #000;
       touch-action: none;
       -webkit-touch-callout: none;
-    }
-    #webgl-loading {
-      position: fixed;
-      inset: 0;
-      z-index: 2147482000;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 16px;
-      padding: 24px;
-      box-sizing: border-box;
-      background: linear-gradient(180deg, #1a1a22 0%, #0d0d12 100%);
-      color: #e8e8f0;
-      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
-      text-align: center;
-      pointer-events: none;
-    }
-    #webgl-loading.hidden {
-      display: none;
-    }
-    #webgl-loading .title {
-      font-size: 1.05rem;
-      font-weight: 600;
-      line-height: 1.5;
-      max-width: 22em;
-    }
-    #webgl-loading .hint {
-      font-size: 0.9rem;
-      opacity: 0.75;
-      max-width: 24em;
-      line-height: 1.45;
-    }
-    #webgl-loading .spinner {
-      width: 40px;
-      height: 40px;
-      border: 3px solid rgba(255,255,255,0.15);
-      border-top-color: #8b9cff;
-      border-radius: 50%;
-      animation: webgl-spin 0.85s linear infinite;
-    }
-    @keyframes webgl-spin {
-      to { transform: rotate(360deg); }
     }
     #unity-rotate-wrap {
       width: 100%;
@@ -87,58 +47,41 @@
     }
     #unity-canvas {
       display: block;
-      touch-action: manipulation;
+      touch-action: none;
       outline: none;
       pointer-events: auto;
-      width: 100%;
-      height: 100%;
-      max-width: none;
-      max-height: none;
+      width: min(100vw, calc(100vh * 16 / 9));
+      height: min(100vh, calc(100vw * 9 / 16));
+      max-width: 100vw;
+      max-height: 100vh;
     }
-    /* 세로: 회전은 canvas 부모(#unity-container)만 — 바깥 래퍼 transform은 WebGL 포인터/TMP 좌표 깨짐의 흔한 원인 */
     body.layout-css90 #unity-rotate-wrap {
       position: fixed;
-      left: 0;
-      top: 0;
+      left: 50%;
+      top: 50%;
       right: auto;
       bottom: auto;
-      width: 100%;
-      height: 100%;
       margin: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transform: none;
+      flex-shrink: 0;
+      transform: translate(-50%, -50%) translateZ(0) rotate(var(--unity-rot, -90deg));
       transform-origin: center center;
-      will-change: auto;
+      will-change: transform;
       pointer-events: auto;
     }
     body.layout-css90 #unity-container {
-      /* 세로 뷰에서 회전 전 논리 가로 박스 = 뷰포트 긴변×짧은변. %/auto는 flex·초기 캔버스에 끌려 과소됨 → dvh/dvw로 고정 */
+      width: 100%;
+      height: 100%;
       position: relative;
       left: auto;
       top: auto;
-      width: 100dvh;
-      height: 100dvw;
-      min-width: 100dvh;
-      min-height: 100dvw;
-      max-width: 100dvh;
-      max-height: 100dvw;
-      flex-shrink: 0;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-sizing: border-box;
-      transform: translateZ(0) rotate(var(--unity-rot, -90deg));
-      transform-origin: center center;
       pointer-events: auto;
     }
     body.layout-css90 #unity-canvas {
       box-sizing: border-box;
       pointer-events: auto;
-    }
-    body.layout-css90 {
-      touch-action: manipulation;
     }
     #rotate-hint {
       display: none;
@@ -156,24 +99,65 @@
     body.layout-css90 #rotate-hint {
       display: none;
     }
+    #tap-landscape-gate {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 2147483000;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 16px;
+      padding: 24px;
+      box-sizing: border-box;
+      background: rgba(0,0,0,0.72);
+      color: #fff;
+      font-family: system-ui, -apple-system, sans-serif;
+      text-align: center;
+      touch-action: manipulation;
+      pointer-events: auto;
+    }
+    #tap-landscape-gate.visible {
+      display: flex;
+    }
+    #tap-landscape-gate button {
+      font-size: 18px;
+      padding: 14px 22px;
+      border-radius: 12px;
+      border: none;
+      background: #6b7fd7;
+      color: #fff;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    #tap-landscape-gate .sub {
+      font-size: 14px;
+      opacity: 0.85;
+      max-width: 320px;
+      line-height: 1.45;
+    }
   </style>
 </head>
 <body>
-  <div id="webgl-loading" aria-live="polite">
-    <div class="spinner" aria-hidden="true"></div>
-    <div class="title">프로그램을 불러오는 중입니다.<br>잠시만 기다려 주세요.</div>
-    <div class="hint">첫 화면이 찌그러져 보이면, 다른 앱으로 잠시 나갔다 오거나 화면을 한 번 터치해 보세요.</div>
+  <div id="tap-landscape-gate" aria-live="polite">
+    <div class="sub">가로 화면이 가장 안정적입니다. 아래를 누르면 전체 화면 후 가로로 잠급니다(Android Chrome 권장).</div>
+    <button type="button" id="tap-landscape-btn">전체 화면 · 가로로 시작</button>
+    <div class="sub">계속 세로로 쓰려면 닫기 — CSS 90° 모드로 돌아갑니다.</div>
+    <button type="button" id="tap-landscape-dismiss" style="background:#444">닫기 (세로·CSS90)</button>
   </div>
   <div id="unity-rotate-wrap">
     <div id="unity-container">
-      <canvas id="unity-canvas" tabindex="0"></canvas>
+      <canvas id="unity-canvas" tabindex="-1"></canvas>
     </div>
   </div>
-  <div id="rotate-hint"></div>
+  <div id="rotate-hint">가로로 보려면 기기를 돌리거나 위 버튼을 사용하세요</div>
   <script>
-    // 회전은 항상 켠다. (요청: 처음부터 회전된 상태 고정)
-    var useCss90Portrait = true;
-    // 회전값은 고정(-90deg)으로 유지한다. (좌/우 90도 반복 변경 방지)
+    var qs = location.search || "";
+    var useCss90Portrait = !/[?&]css90=0(?:&|$)/.test(qs);
+    var skipLandscapeGate = /[?&]nogate=1(?:&|$)/.test(qs);
+    if (/[?&]rot=90(?:&|$)/.test(qs)) {
+      document.documentElement.style.setProperty("--unity-rot", "90deg");
+    }
 
     var buildUrl = "Build";
     var loaderUrl = buildUrl + "/Re_Web_59.loader.js";
@@ -189,7 +173,6 @@
       companyName: "DefaultCompany",
       productName: "모아채움",
       productVersion: "1.0",
-      // true: CSS 캔버스 표시 크기에 맞춰 버퍼 동기(수동 width/height와 이중 적용 시 깨짐 방지)
       matchWebGLToCanvasSize: true,
       devicePixelRatio: dpr
     };
@@ -197,37 +180,15 @@
     var canvas = document.querySelector("#unity-canvas");
     var hint = document.querySelector("#rotate-hint");
     var rotateWrap = document.querySelector("#unity-rotate-wrap");
-    var unityContainer = document.querySelector("#unity-container");
-    var loadingEl = document.querySelector("#webgl-loading");
+    var gate = document.querySelector("#tap-landscape-gate");
+    var gateBtn = document.querySelector("#tap-landscape-btn");
+    var gateDismiss = document.querySelector("#tap-landscape-dismiss");
+
+    var landscapeGateDismissed = false;
     var unityInstanceRef = null;
-    var TARGET_ASPECT = 16 / 9;
-
-    /** 주소창/툴바로 inner*가 흔들릴 때 대비 (없으면 inner 사용) */
-    function readViewportCssPixels() {
-      var vv = window.visualViewport;
-      if (vv && vv.width >= 32 && vv.height >= 32) {
-        return {
-          w: Math.round(vv.width),
-          h: Math.round(vv.height),
-          l: Math.round(vv.offsetLeft || 0),
-          t: Math.round(vv.offsetTop || 0)
-        };
-      }
-      return {
-        w: Math.round(window.innerWidth || document.documentElement.clientWidth || 0),
-        h: Math.round(window.innerHeight || document.documentElement.clientHeight || 0),
-        l: 0,
-        t: 0
-      };
-    }
-
-    function hideLoadingOverlay() {
-      if (loadingEl) loadingEl.classList.add("hidden");
-    }
 
     function isPortraitViewport() {
-      var vp = readViewportCssPixels();
-      return vp.h > vp.w;
+      return window.innerHeight > window.innerWidth;
     }
 
     var resizeTimer = null;
@@ -236,178 +197,205 @@
       resizeTimer = setTimeout(function () {
         resizeTimer = null;
         window.dispatchEvent(new Event("resize"));
+        try {
+          if (unityInstanceRef && unityInstanceRef.Module && unityInstanceRef.Module.canvas === canvas) {
+            if (typeof unityInstanceRef.Module.SetCanvasSize === "function") {
+              var r = canvas.getBoundingClientRect();
+              var w = Math.max(1, Math.floor(r.width));
+              var h = Math.max(1, Math.floor(r.height));
+              unityInstanceRef.Module.SetCanvasSize(w, h, false);
+            }
+          }
+        } catch (e) {}
       }, 80);
-    }
-
-    function isTextEntryActive() {
-      var el = document.activeElement;
-      if (!el) return false;
-      var tag = (el.tagName || "").toUpperCase();
-      if (tag === "INPUT" || tag === "TEXTAREA") return true;
-      return !!el.isContentEditable;
-    }
-
-    function bumpLayout(reason) {
-      if (isTextEntryActive()) return;
-      syncCss90Layout();
-      notifyUnityResizeSoon();
-      setTimeout(function () {
-        syncCss90Layout();
-        notifyUnityResizeSoon();
-      }, 120);
-      setTimeout(function () {
-        syncCss90Layout();
-        notifyUnityResizeSoon();
-      }, 400);
     }
 
     function syncCanvas16InsideWrap() {
       if (!rotateWrap || !canvas) return;
-      // 화면 찌그러짐 방지: 템플릿에서 16:9 강제하지 않고 전체 박스를 채운다.
-      canvas.style.width = "100%";
-      canvas.style.height = "100%";
-      canvas.style.maxWidth = "none";
-      canvas.style.maxHeight = "none";
+      if (!document.body.classList.contains("layout-css90")) {
+        canvas.style.width = "";
+        canvas.style.height = "";
+        canvas.style.maxWidth = "";
+        canvas.style.maxHeight = "";
+        return;
+      }
+      var ww = rotateWrap.clientWidth;
+      var wh = rotateWrap.clientHeight;
+      if (ww < 2 || wh < 2) return;
+      var ar = 16 / 9;
+      var cw;
+      var ch;
+      if (ww / wh > ar) {
+        ch = wh;
+        cw = Math.floor(ch * ar);
+      } else {
+        cw = ww;
+        ch = Math.floor(cw / ar);
+      }
+      canvas.style.width = cw + "px";
+      canvas.style.height = ch + "px";
+      canvas.style.maxWidth = "100%";
+      canvas.style.maxHeight = "100%";
     }
 
     function applyCss90Metrics() {
       if (!rotateWrap) return;
-      var vp = readViewportCssPixels();
-      var iw = vp.w;
-      var ih = vp.h;
       if (!document.body.classList.contains("layout-css90")) {
-        rotateWrap.style.left = vp.l + "px";
-        rotateWrap.style.top = vp.t + "px";
-        rotateWrap.style.width = iw + "px";
-        rotateWrap.style.height = ih + "px";
-        if (unityContainer) {
-          unityContainer.style.width = "";
-          unityContainer.style.height = "";
-          unityContainer.style.minWidth = "";
-          unityContainer.style.minHeight = "";
-          unityContainer.style.maxWidth = "";
-          unityContainer.style.maxHeight = "";
-        }
+        rotateWrap.style.width = "";
+        rotateWrap.style.height = "";
         syncCanvas16InsideWrap();
         return;
       }
-      rotateWrap.style.left = vp.l + "px";
-      rotateWrap.style.top = vp.t + "px";
-      rotateWrap.style.width = iw + "px";
-      rotateWrap.style.height = ih + "px";
-      if (unityContainer) {
-        /* dvh/dvw 미지원 브라우저용 폴백 */
-        if (typeof CSS === "undefined" || !CSS.supports || !CSS.supports("width", "100dvh")) {
-          if (ih < iw) {
-            var tmp = ih;
-            ih = iw;
-            iw = tmp;
-          }
-          unityContainer.style.width = ih + "px";
-          unityContainer.style.height = iw + "px";
-        } else {
-          unityContainer.style.width = "";
-          unityContainer.style.height = "";
-          unityContainer.style.minWidth = "";
-          unityContainer.style.minHeight = "";
-          unityContainer.style.maxWidth = "";
-          unityContainer.style.maxHeight = "";
-        }
-      }
+      var iw = window.innerWidth;
+      var ih = window.innerHeight;
+      rotateWrap.style.width = ih + "px";
+      rotateWrap.style.height = iw + "px";
       syncCanvas16InsideWrap();
       notifyUnityResizeSoon();
     }
 
     function syncCss90Layout() {
-      if (useCss90Portrait) {
+      if (useCss90Portrait && isPortraitViewport()) {
         document.body.classList.add("layout-css90");
       } else {
         document.body.classList.remove("layout-css90");
       }
       applyCss90Metrics();
       updateRotateHint();
+      updateLandscapeGateVisibility();
     }
 
     function updateRotateHint() {
       if (!hint) return;
-      hint.style.display = "none";
+      if (document.body.classList.contains("layout-css90")) {
+        hint.style.display = "none";
+        return;
+      }
+      hint.style.display = isPortraitViewport() ? "block" : "none";
     }
 
-    document.addEventListener("visibilitychange", function () {
-      if (!document.hidden) bumpLayout("visible");
-    });
-    window.addEventListener("pageshow", function () {
-      bumpLayout("pageshow");
-    });
-    window.addEventListener("focus", function () {
-      bumpLayout("focus");
-    });
+    function isDocFullscreen() {
+      return !!(
+        document.fullscreenElement ||
+        document.webkitFullscreenElement ||
+        document.msFullscreenElement
+      );
+    }
 
-    document.addEventListener("pointerdown", function onFirstTouch() {
-      bumpLayout("first-touch");
-    }, { passive: true, capture: true, once: true });
+    function updateLandscapeGateVisibility() {
+      if (!gate) return;
+      if (skipLandscapeGate || landscapeGateDismissed) {
+        gate.classList.remove("visible");
+        return;
+      }
+      if (isPortraitViewport() && !isDocFullscreen()) {
+        gate.classList.add("visible");
+      } else {
+        gate.classList.remove("visible");
+      }
+    }
 
-    syncCss90Layout();
-    window.addEventListener("resize", function () {
-      if (isTextEntryActive()) return;
-      syncCss90Layout();
-    });
-    window.addEventListener("orientationchange", function () {
-      setTimeout(syncCss90Layout, 200);
-      setTimeout(bumpLayout, 350);
-    });
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener("resize", function () {
-        if (isTextEntryActive()) return;
+    function requestFs(el) {
+      var e = el || document.documentElement;
+      if (e.requestFullscreen) return e.requestFullscreen();
+      if (e.webkitRequestFullscreen) return e.webkitRequestFullscreen();
+      if (e.msRequestFullscreen) return e.msRequestFullscreen();
+      return Promise.reject(new Error("no fullscreen"));
+    }
+
+    function tryLockLandscapeAfterFs() {
+      var o = screen.orientation || screen.mozOrientation;
+      if (!o || !o.lock) return Promise.resolve();
+      return o.lock("landscape-primary").catch(function () {
+        return o.lock("landscape").catch(function () {});
+      });
+    }
+
+    function tryEnterLandscapeFromGate() {
+      requestFs(document.documentElement).then(function () {
+        return tryLockLandscapeAfterFs();
+      }).then(function () {
+        landscapeGateDismissed = true;
+        gate.classList.remove("visible");
+        syncCss90Layout();
+        notifyUnityResizeSoon();
+      }).catch(function () {
+        landscapeGateDismissed = true;
+        gate.classList.remove("visible");
         syncCss90Layout();
         notifyUnityResizeSoon();
       });
     }
 
-    requestAnimationFrame(function () {
+    if (gateBtn) {
+      gateBtn.addEventListener("click", function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        tryEnterLandscapeFromGate();
+      });
+    }
+    if (gateDismiss) {
+      gateDismiss.addEventListener("click", function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        landscapeGateDismissed = true;
+        gate.classList.remove("visible");
+        syncCss90Layout();
+        notifyUnityResizeSoon();
+      });
+    }
+
+    function onFsChange() {
       syncCss90Layout();
       notifyUnityResizeSoon();
-      requestAnimationFrame(function () {
-        syncCss90Layout();
-        notifyUnityResizeSoon();
-      });
+    }
+    document.addEventListener("fullscreenchange", onFsChange);
+    document.addEventListener("webkitfullscreenchange", onFsChange);
+
+    syncCss90Layout();
+    window.addEventListener("resize", syncCss90Layout);
+    window.addEventListener("orientationchange", function () {
+      setTimeout(syncCss90Layout, 200);
     });
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", syncCss90Layout);
+    }
+
+    function tryLockLandscape() {
+      if (document.body.classList.contains("layout-css90")) return;
+      var o = screen.orientation;
+      if (o && o.lock) {
+        o.lock("landscape").catch(function () {});
+      }
+    }
 
     var script = document.createElement("script");
     script.src = loaderUrl;
     script.onload = function () {
       createUnityInstance(canvas, config, function () {}).then(function (unityInstance) {
         unityInstanceRef = unityInstance;
-        hideLoadingOverlay();
-        bumpLayout("unity-ready");
-        [600, 1400, 2800].forEach(function (ms) {
-          setTimeout(function () { bumpLayout("delayed-" + ms); }, ms);
-        });
+        updateLandscapeGateVisibility();
 
-        // touchstart에서 canvas/window에 포커스를 주면, 같은 제스처로 TMP가 연 브라우저 숨김 input의
-        // 포커스를 뺏어 모바일 소프트 키보드가 안 뜨는 경우가 많음. 레이아웃만 동기화한다.
-        var syncLayoutFromCanvasPointer = function () {
+        var fixFocus = function () {
+          tryLockLandscape();
           applyCss90Metrics();
           notifyUnityResizeSoon();
         };
-        canvas.addEventListener("touchstart", syncLayoutFromCanvasPointer, { passive: true });
-        canvas.addEventListener("mousedown", syncLayoutFromCanvasPointer);
+        canvas.addEventListener("touchstart", fixFocus, { passive: true });
+        canvas.addEventListener("mousedown", fixFocus);
         if (typeof ResizeObserver !== "undefined" && rotateWrap) {
           var ro = new ResizeObserver(function () {
             syncCanvas16InsideWrap();
             notifyUnityResizeSoon();
           });
           ro.observe(rotateWrap);
-          if (unityContainer) ro.observe(unityContainer);
           ro.observe(canvas);
         }
       }).catch(function (message) {
-        hideLoadingOverlay();
         alert(message);
       });
     };
     script.onerror = function () {
-      hideLoadingOverlay();
       alert("WebGL 로더를 불러오지 못했습니다. Build 폴더와 빌드 산출물 여부를 확인하세요.");
     };
     document.body.appendChild(script);
