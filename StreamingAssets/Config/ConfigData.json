@@ -17,6 +17,8 @@
       "accessQCount": 10,
       "conclusionType": "Divide",
       "conclusionView": "Image",
+      "webCSV": "",
+      "webCSVSecret": "",
       "fields": [
         {
           "fieldName": "Parent",
