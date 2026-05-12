@@ -234,7 +234,16 @@
       }, 80);
     }
 
+    function isTextEntryActive() {
+      var el = document.activeElement;
+      if (!el) return false;
+      var tag = (el.tagName || "").toUpperCase();
+      if (tag === "INPUT" || tag === "TEXTAREA") return true;
+      return !!el.isContentEditable;
+    }
+
     function bumpLayout(reason) {
+      if (isTextEntryActive()) return;
       syncCss90Layout();
       notifyUnityResizeSoon();
       setTimeout(function () {
@@ -282,6 +291,12 @@
         var sizeBox = rotateWrap;
         wrapW = sizeBox.clientWidth || window.innerWidth || 0;
         wrapH = sizeBox.clientHeight || window.innerHeight || 0;
+        // 기본(비회전) 경로에서는 16:9 강제를 하지 않는다. (모바일 찌그러짐/축소 방지)
+        canvas.style.width = "100%";
+        canvas.style.height = "100%";
+        canvas.style.maxWidth = "none";
+        canvas.style.maxHeight = "none";
+        return;
       }
       var fitted = getAspectFittedSize(wrapW, wrapH, TARGET_ASPECT);
       canvas.style.width = fitted.width + "px";
@@ -368,13 +383,17 @@
     }, { passive: true, capture: true, once: true });
 
     syncCss90Layout();
-    window.addEventListener("resize", syncCss90Layout);
+    window.addEventListener("resize", function () {
+      if (isTextEntryActive()) return;
+      syncCss90Layout();
+    });
     window.addEventListener("orientationchange", function () {
       setTimeout(syncCss90Layout, 200);
       setTimeout(bumpLayout, 350);
     });
     if (window.visualViewport) {
       window.visualViewport.addEventListener("resize", function () {
+        if (isTextEntryActive()) return;
         syncCss90Layout();
         notifyUnityResizeSoon();
       });
