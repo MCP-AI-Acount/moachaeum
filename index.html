@@ -95,33 +95,44 @@
       max-width: none;
       max-height: none;
     }
+    /* 세로: 회전은 canvas 부모(#unity-container)만 — 바깥 래퍼 transform은 WebGL 포인터/TMP 좌표 깨짐의 흔한 원인 */
     body.layout-css90 #unity-rotate-wrap {
       position: fixed;
-      left: 50%;
-      top: 50%;
+      left: 0;
+      top: 0;
       right: auto;
       bottom: auto;
-      margin: 0;
-      flex-shrink: 0;
-      transform: translate(-50%, -50%) translateZ(0) rotate(var(--unity-rot, -90deg));
-      transform-origin: center center;
-      will-change: transform;
-      pointer-events: auto;
-    }
-    body.layout-css90 #unity-container {
       width: 100%;
       height: 100%;
-      position: relative;
-      left: auto;
-      top: auto;
+      margin: 0;
       display: flex;
       align-items: center;
       justify-content: center;
+      transform: none;
+      transform-origin: center center;
+      will-change: auto;
+      pointer-events: auto;
+    }
+    body.layout-css90 #unity-container {
+      position: relative;
+      left: auto;
+      top: auto;
+      width: auto;
+      height: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      transform: translateZ(0) rotate(var(--unity-rot, -90deg));
+      transform-origin: center center;
       pointer-events: auto;
     }
     body.layout-css90 #unity-canvas {
       box-sizing: border-box;
       pointer-events: auto;
+    }
+    body.layout-css90 {
+      touch-action: manipulation;
     }
     #rotate-hint {
       display: none;
@@ -180,6 +191,7 @@
     var canvas = document.querySelector("#unity-canvas");
     var hint = document.querySelector("#rotate-hint");
     var rotateWrap = document.querySelector("#unity-rotate-wrap");
+    var unityContainer = document.querySelector("#unity-container");
     var loadingEl = document.querySelector("#webgl-loading");
     var unityInstanceRef = null;
     var fullscreenLandscapeAttempted = false;
@@ -233,8 +245,11 @@
 
     function syncCanvas16InsideWrap() {
       if (!rotateWrap || !canvas) return;
-      var wrapW = rotateWrap.clientWidth || window.innerWidth || 0;
-      var wrapH = rotateWrap.clientHeight || window.innerHeight || 0;
+      var sizeBox = document.body.classList.contains("layout-css90") && unityContainer
+        ? unityContainer
+        : rotateWrap;
+      var wrapW = sizeBox.clientWidth || window.innerWidth || 0;
+      var wrapH = sizeBox.clientHeight || window.innerHeight || 0;
       var fitted = getAspectFittedSize(wrapW, wrapH, TARGET_ASPECT);
       canvas.style.width = fitted.width + "px";
       canvas.style.height = fitted.height + "px";
@@ -253,11 +268,19 @@
       if (!document.body.classList.contains("layout-css90")) {
         rotateWrap.style.width = iw + "px";
         rotateWrap.style.height = ih + "px";
+        if (unityContainer) {
+          unityContainer.style.width = "";
+          unityContainer.style.height = "";
+        }
         syncCanvas16InsideWrap();
         return;
       }
-      rotateWrap.style.width = ih + "px";
-      rotateWrap.style.height = iw + "px";
+      rotateWrap.style.width = "100%";
+      rotateWrap.style.height = "100%";
+      if (unityContainer) {
+        unityContainer.style.width = ih + "px";
+        unityContainer.style.height = iw + "px";
+      }
       syncCanvas16InsideWrap();
       notifyUnityResizeSoon();
     }
@@ -342,6 +365,7 @@
             notifyUnityResizeSoon();
           });
           ro.observe(rotateWrap);
+          if (unityContainer) ro.observe(unityContainer);
           ro.observe(canvas);
         }
       }).catch(function (message) {
