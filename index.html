@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>모아채움</title>
+  <!-- Unity WebGL 빌드 시 템플릿 매크로만 치환됩니다. 주석에 삼중중괄호 매크로 문법을 넣지 마세요. -->
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      position: fixed;
+      left: 0;
+      top: 0;
+      background: #7f88cb;
+      touch-action: none;
+      -webkit-touch-callout: none;
+    }
+    #webgl-loading {
+      position: fixed;
+      inset: 0;
+      z-index: 2147482000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      padding: 24px;
+      box-sizing: border-box;
+      background: linear-gradient(180deg, #1a1a22 0%, #0d0d12 100%);
+      color: #e8e8f0;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+      text-align: center;
+      pointer-events: none;
+    }
+    #webgl-loading.hidden {
+      display: none;
+    }
+    #webgl-loading .title {
+      font-size: 1.05rem;
+      font-weight: 600;
+      line-height: 1.5;
+      max-width: 22em;
+    }
+    #webgl-loading .hint {
+      font-size: 0.9rem;
+      opacity: 0.75;
+      max-width: 24em;
+      line-height: 1.45;
+    }
+    #webgl-loading .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(255,255,255,0.15);
+      border-top-color: #8b9cff;
+      border-radius: 50%;
+      animation: webgl-spin 0.85s linear infinite;
+    }
+    @keyframes webgl-spin {
+      to { transform: rotate(360deg); }
+    }
+    #unity-rotate-wrap {
+      width: 100%;
+      height: 100%;
+      position: fixed;
+      left: 0;
+      top: 0;
+      touch-action: none;
+      pointer-events: auto;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #unity-container {
+      width: 100%;
+      height: 100%;
+      position: fixed;
+      left: 0;
+      top: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      pointer-events: auto;
+    }
+    #unity-canvas {
+      display: block;
+      touch-action: manipulation;
+      outline: none;
+      pointer-events: auto;
+      width: 100%;
+      height: 100%;
+      max-width: none;
+      max-height: none;
+    }
+    body.layout-css90 #unity-rotate-wrap {
+      position: fixed;
+      left: 50%;
+      top: 50%;
+      right: auto;
+      bottom: auto;
+      margin: 0;
+      flex-shrink: 0;
+      transform: translate(-50%, -50%) translateZ(0) rotate(var(--unity-rot, -90deg));
+      transform-origin: center center;
+      will-change: transform;
+      pointer-events: auto;
+    }
+    body.layout-css90 #unity-container {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      left: auto;
+      top: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: auto;
+    }
+    body.layout-css90 #unity-canvas {
+      box-sizing: border-box;
+      pointer-events: auto;
+    }
+    #rotate-hint {
+      display: none;
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 12px;
+      text-align: center;
+      font-family: system-ui, sans-serif;
+      font-size: 14px;
+      color: rgba(255,255,255,0.85);
+      pointer-events: none;
+      z-index: 1;
+    }
+    body.layout-css90 #rotate-hint {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="webgl-loading" aria-live="polite">
+    <div class="spinner" aria-hidden="true"></div>
+    <div class="title">프로그램을 불러오는 중입니다.<br>잠시만 기다려 주세요.</div>
+    <div class="hint">첫 화면이 찌그러져 보이면, 다른 앱으로 잠시 나갔다 오거나 화면을 한 번 터치해 보세요.</div>
+  </div>
+  <div id="unity-rotate-wrap">
+    <div id="unity-container">
+      <canvas id="unity-canvas" tabindex="0"></canvas>
+    </div>
+  </div>
+  <div id="rotate-hint">가로로 보려면 기기를 가로로 돌려 주세요</div>
+  <script>
+    var qs = location.search || "";
+    var useCss90Portrait = !/[?&]css90=0(?:&|$)/.test(qs);
+    // 회전값은 고정(-90deg)으로 유지한다. (좌/우 90도 반복 변경 방지)
+
+    var buildUrl = "Build";
+    var loaderUrl = buildUrl + "/Re_Web_58.loader.js";
+
+    var dpr = window.devicePixelRatio || 1;
+    if (dpr > 2) dpr = 2;
+
+    var config = {
+      dataUrl: buildUrl + "/Re_Web_58.data",
+      frameworkUrl: buildUrl + "/Re_Web_58.framework.js",
+      codeUrl: buildUrl + "/Re_Web_58.wasm",
+      streamingAssetsUrl: "StreamingAssets",
+      companyName: "DefaultCompany",
+      productName: "모아채움",
+      productVersion: "1.0",
+      matchWebGLToCanvasSize: false,
+      devicePixelRatio: dpr
+    };
+
+    var canvas = document.querySelector("#unity-canvas");
+    var hint = document.querySelector("#rotate-hint");
+    var rotateWrap = document.querySelector("#unity-rotate-wrap");
+    var loadingEl = document.querySelector("#webgl-loading");
+    var unityInstanceRef = null;
+    var fullscreenLandscapeAttempted = false;
+    var TARGET_ASPECT = 16 / 9;
+
+    function hideLoadingOverlay() {
+      if (loadingEl) loadingEl.classList.add("hidden");
+    }
+
+    function isPortraitViewport() {
+      return window.innerHeight > window.innerWidth;
+    }
+
+    var resizeTimer = null;
+    function notifyUnityResizeSoon() {
+      if (resizeTimer) clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(function () {
+        resizeTimer = null;
+        window.dispatchEvent(new Event("resize"));
+      }, 80);
+    }
+
+    function bumpLayout(reason) {
+      syncCss90Layout();
+      notifyUnityResizeSoon();
+      setTimeout(function () {
+        syncCss90Layout();
+        notifyUnityResizeSoon();
+      }, 120);
+      setTimeout(function () {
+        syncCss90Layout();
+        notifyUnityResizeSoon();
+      }, 400);
+    }
+
+    function getAspectFittedSize(containerW, containerH, targetAspect) {
+      if (containerW <= 0 || containerH <= 0) {
+        return { width: 0, height: 0 };
+      }
+      var width = containerW;
+      var height = width / targetAspect;
+      if (height > containerH) {
+        height = containerH;
+        width = height * targetAspect;
+      }
+      return {
+        width: Math.max(1, Math.round(width)),
+        height: Math.max(1, Math.round(height))
+      };
+    }
+
+    function syncCanvas16InsideWrap() {
+      if (!rotateWrap || !canvas) return;
+      var wrapW = rotateWrap.clientWidth || window.innerWidth || 0;
+      var wrapH = rotateWrap.clientHeight || window.innerHeight || 0;
+      var fitted = getAspectFittedSize(wrapW, wrapH, TARGET_ASPECT);
+      canvas.style.width = fitted.width + "px";
+      canvas.style.height = fitted.height + "px";
+      canvas.style.maxWidth = "none";
+      canvas.style.maxHeight = "none";
+      var targetBufferW = Math.max(1, Math.round(fitted.width * dpr));
+      var targetBufferH = Math.max(1, Math.round(fitted.height * dpr));
+      if (canvas.width !== targetBufferW) canvas.width = targetBufferW;
+      if (canvas.height !== targetBufferH) canvas.height = targetBufferH;
+    }
+
+    function applyCss90Metrics() {
+      if (!rotateWrap) return;
+      var iw = window.innerWidth;
+      var ih = window.innerHeight;
+      if (!document.body.classList.contains("layout-css90")) {
+        rotateWrap.style.width = iw + "px";
+        rotateWrap.style.height = ih + "px";
+        syncCanvas16InsideWrap();
+        return;
+      }
+      rotateWrap.style.width = ih + "px";
+      rotateWrap.style.height = iw + "px";
+      syncCanvas16InsideWrap();
+      notifyUnityResizeSoon();
+    }
+
+    function syncCss90Layout() {
+      if (useCss90Portrait && isPortraitViewport()) {
+        document.body.classList.add("layout-css90");
+      } else {
+        document.body.classList.remove("layout-css90");
+      }
+      applyCss90Metrics();
+      updateRotateHint();
+    }
+
+    function updateRotateHint() {
+      if (!hint) return;
+      if (document.body.classList.contains("layout-css90")) {
+        hint.style.display = "none";
+        return;
+      }
+      hint.style.display = isPortraitViewport() ? "block" : "none";
+    }
+
+    document.addEventListener("visibilitychange", function () {
+      if (!document.hidden) bumpLayout("visible");
+    });
+    window.addEventListener("pageshow", function () {
+      bumpLayout("pageshow");
+    });
+    window.addEventListener("focus", function () {
+      bumpLayout("focus");
+    });
+
+    document.addEventListener("pointerdown", function onFirstTouch() {
+      bumpLayout("first-touch");
+    }, { passive: true, capture: true, once: true });
+
+    syncCss90Layout();
+    window.addEventListener("resize", syncCss90Layout);
+    window.addEventListener("orientationchange", function () {
+      setTimeout(syncCss90Layout, 200);
+      setTimeout(bumpLayout, 350);
+    });
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", function () {
+        syncCss90Layout();
+        notifyUnityResizeSoon();
+      });
+    }
+
+    requestAnimationFrame(function () {
+      syncCss90Layout();
+      notifyUnityResizeSoon();
+      requestAnimationFrame(function () {
+        syncCss90Layout();
+        notifyUnityResizeSoon();
+      });
+    });
+
+    var script = document.createElement("script");
+    script.src = loaderUrl;
+    script.onload = function () {
+      createUnityInstance(canvas, config, function () {}).then(function (unityInstance) {
+        unityInstanceRef = unityInstance;
+        hideLoadingOverlay();
+        bumpLayout("unity-ready");
+        [600, 1400, 2800].forEach(function (ms) {
+          setTimeout(function () { bumpLayout("delayed-" + ms); }, ms);
+        });
+
+        var fixFocus = function (ev) {
+          window.focus();
+          // 모바일 WebGL: canvas.focus()는 브라우저 가상 키보드(TMP_InputField) 포커스를 가로챌 수 있음 → 터치에서는 생략
+          if (!ev || ev.type !== "touchstart")
+            canvas.focus();
+          applyCss90Metrics();
+          notifyUnityResizeSoon();
+        };
+        canvas.addEventListener("touchstart", fixFocus, { passive: true });
+        canvas.addEventListener("mousedown", fixFocus);
+        if (typeof ResizeObserver !== "undefined" && rotateWrap) {
+          var ro = new ResizeObserver(function () {
+            syncCanvas16InsideWrap();
+            notifyUnityResizeSoon();
+          });
+          ro.observe(rotateWrap);
+          ro.observe(canvas);
+        }
+      }).catch(function (message) {
+        hideLoadingOverlay();
+        alert(message);
+      });
+    };
+    script.onerror = function () {
+      hideLoadingOverlay();
+      alert("WebGL 로더를 불러오지 못했습니다. Build 폴더와 빌드 산출물 여부를 확인하세요.");
+    };
+    document.body.appendChild(script);
+  </script>
+</body>
+</html>

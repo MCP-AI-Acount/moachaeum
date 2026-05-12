@@ -1,0 +1,126 @@
+{
+  "config": {
+    "inputInfor": {
+      "usePhoneNumber": false,
+      "usePersonalInfor": false,
+      "endLink": [
+        "종료하기",
+        "신청하기"
+   ]
+    },
+    "appInfor": {
+      "maskTime": 0.5,
+      "sign": "Icon",
+      "usePoolingSystem": false,
+      "mustSolve": true,
+      "coreQCount": 13,
+      "accessQCount": 10,
+      "conclusionType": "Divide",
+      "conclusionView": "Image",
+      "fields": [
+        {
+          "fieldName": "Parent",
+          "groupId": "Parenting",
+          "fieldTitle": "A 축 (부모중심 / 아이중심)",
+          "description": "아이를 대하는 태도와 교육관이 부모의 원칙 중심인지, 아이의 자율성 중심인지 분석합니다.",
+          "scoreNames": [
+            "Parent"
+          ],
+          "scoreTypes": [
+            "P~C"
+          ],
+          "questionFieldKeys": [
+            "ParentingStyle"
+          ],
+          "scoreValuesStartIndex": 0,
+          "introFixQs": []
+        },
+        {
+          "fieldName": "Difficult",
+          "groupId": "Parenting",
+          "fieldTitle": "B 축 (편함 / 힘듦)",
+          "description": "현재 육아 과정에서 느끼는 심리적 여유와 에너지 상태를 측정합니다.",
+          "scoreNames": [
+            "Difficult"
+          ],
+          "scoreTypes": [
+            "E~H"
+          ],
+          "questionFieldKeys": [
+            "ParentingStyle"
+          ],
+          "scoreValuesStartIndex": 1,
+          "introFixQs": []
+        }
+      ]
+    }
+  },
+  "contents": {
+    "cStart": {
+      "sortVertical": false,
+      "title": "",
+      "subTitle": "",
+      "description_1": "",
+      "description_2": "",
+      "useCustom": "InputField"
+    },
+    "commencement": {
+      "title": "",
+      "subTitle": "지금의 나와 아이를 온전히 바라보는 시간",
+      "description": "정답은 없습니다.\n아이의 성장에 따라 달라지는 <color=red>부모인 나의 모습을 돌아보기 위한 과정</color>이며,\n4개의 보기로 부모님의 모든 마음을 담을 수 없지만,\n가장 가까운 것으로 선택해 주세요"
+    },
+    "introCombineQs": [],
+    "outtroCombineQs": [
+      {
+        "type": "Subjective",
+        "questionText": "최근 아이의 행동이나 부모님의 고민과 궁금한 점을 작성해 주세요.",
+        "holdText": "예) 아이행동 :\n   부모반응 :"
+      }
+    ],
+    "result": {
+      "resultTitle": "",
+      "groupResults": [
+        {
+          "targetGroupId": "Parenting",
+          "combineType": "CustomInput",
+          "typeDescriptions": [
+            {
+              "type": "PE",
+              "title": "침묵방전형",
+              "description": "'내 안의 복잡한 생각들이 크게 들어있어 아이가 잘 안 보이네요'\n⇛ 내 마음 속 현실의 무게에 집중하는 시간, 잠시 내려놓고 아이를 바라봐주세요.**\n**부모님의 바쁜 일상과 고단함 속에, 아이의 하루를 챙기는 것만으로도 충분히 애쓰시는 거 알고 있습니다.\n아이의 삶 속에 부모의 등장이 줄어들수록, 아이는 점차 '나의 세상'을 혼자 지키는 법을 배워\n또래와의 관계에서 거리를 두거나 자신에 대한 확신이 부족해질 수 있습니다.'\n\n<color=red>[잠시멈춤] 오늘 아이와 있을때 핸드폰이나 tv,혹은 다른 일에 시선을 두고 있었나요?</color>"
+            },
+            {
+              "type": "PH",
+              "title": "정답 가이드형",
+              "description": "'완벽한 부모가 되려는 책임감이 때론 아이가 진짜 원하는 것을 가리기도 합니다.'\n⇛ '내 정답'과 '현실의 결과'에 더 몰두하고 있어, 아이는 왜? 라고 갸우뚱하네요.\n**아이에게 세상의 바른 기준을 알려주고 싶은 부모님의 간절한 마음, 잘 알고 있습니다.**\n울음을 멈추게 하고, 규칙을 지키게 하고,정리하는 습관을 들이려는 과정 속에서\n아이는 점차 '이렇게 해야 사랑받을 수 있구나' 하고 아이의 감정보다 '해야 할 일'을 더 앞세우게 할 수 있습니다.\n\n<color=red>[잠시멈춤] 오늘 아이에게 '안돼' 라고 말할때 내가 원했던 최종 행동은 무엇이었나요?</color>"
+            },
+            {
+              "type": "CE",
+              "title": "존중 에너지형",
+              "description": "아이의 세계를 '존중'하며 나도 함께 충전되고 있네요.\n⇛ 존중은 아이에게 가장 큰 선물입니다.\n아이의 마음에 귀 기울이며,필요한 기준과 규칙을 알려주고 싶은 부모님의 마음 멋지십니다.\n**아이의 의견을 충분히 듣고,함께 납득할 수 있는 규칙을 만들어가며 스스로 선택하고 책임지는 경험을 쌓게 합니다.**\n아이는 자신의 감정을 표현하면서도 타인과 조율하고 스스로 기준을 세울 수 있는 힘을 키워갑니다.'\n\n<color=red>[잠시멈춤] 오늘 아이의 의견을 충분히 들으면서도 ,동시에 명확한 규칙을 적용했던 상황은 있었나요?</color>"
+            },
+            {
+              "type": "CH",
+              "title": "올인 헌신형",
+              "description": "아이의 '시행착오'를 지켜보기보다 부모님이 대신 '정답'을 만들어주고 있네요.\n⇛사랑이라는 이름의 조급함이 아이 스스로 자라날 소중한 시간을 가로막고 있을 수 있습니다.\n**아이에게 세상의 모든 좋은 것을 다 주고 싶은 부모님의 깊은 사랑, 잘 알고 있습니다.**\n아이가 원하는 것을 먼저 채워주다 보면, '내가 원하는 것은 이루어지는 것'이라고 배우게 되어\n원하는 것이 이루어지지 않을 때 혼란을 겪거나,스스로 감정을 다스리는 기회가 조금씩 줄어들 수 있습니다.\n\n<color=red>[잠시멈춤] 오늘 아이가 혼자 하려 할 때 내가 개입했던 순간은? 개입해서 얻은 결과는 어떤 것인가요?</color>"
+            }
+          ]
+        }
+      ]
+    },
+    "cEnd": {
+      "sortVertical": true,
+      "title": "숫자를 넘어서는 진심의 연결",
+      "description_1": "<color=#555555>측정된 거리(km)는 부모님이 아이를 바라보는 하나의 시선,작은 거울일 뿐입니다.\n이제 숫자 너머, 아이의 발달 및 기질과 부모님의 일상이 맞물린 하루하루를 모아\n내아이만의 '육아기준'을 찾아갈 차례입니다.</color>\n<b>모아채움은 아이의 행동을 문제가 아닌 성장을 향한 소중한 신호로 해석합니다.</b>",
+      "description_2": "<color=#555555>육아는 지나간 뒤에야 이해됩니다.\n스쳐 지나가는 순간의 감정과 고민을 <color=red>기록하면 연결됩니다.</color>\n모아채움은 그 기록을 모아 성장으로 채웁니다.</color>\n<b>내 자녀 맞춤 실전코칭을 위한 [STEP 2 성찰 워크지]</b>",
+      "useCustom": "Image"
+    },
+    "plus": {
+      "plusQs": [],
+      "sortVertical": false,
+      "plusTitle": "",
+      "plusSubTitle": "",
+      "plusDescription": ""
+    }
+  }
+}
