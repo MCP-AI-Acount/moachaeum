@@ -351,14 +351,14 @@
           setTimeout(function () { bumpLayout("delayed-" + ms); }, ms);
         });
 
-        var fixFocus = function () {
-          window.focus();
-          canvas.focus();
+        // touchstart에서 canvas/window에 포커스를 주면, 같은 제스처로 TMP가 연 브라우저 숨김 input의
+        // 포커스를 뺏어 모바일 소프트 키보드가 안 뜨는 경우가 많음. 레이아웃만 동기화한다.
+        var syncLayoutFromCanvasPointer = function () {
           applyCss90Metrics();
           notifyUnityResizeSoon();
         };
-        canvas.addEventListener("touchstart", fixFocus, { passive: false });
-        canvas.addEventListener("mousedown", fixFocus);
+        canvas.addEventListener("touchstart", syncLayoutFromCanvasPointer, { passive: true });
+        canvas.addEventListener("mousedown", syncLayoutFromCanvasPointer);
         if (typeof ResizeObserver !== "undefined" && rotateWrap) {
           var ro = new ResizeObserver(function () {
             syncCanvas16InsideWrap();
