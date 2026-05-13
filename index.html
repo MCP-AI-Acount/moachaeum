@@ -370,6 +370,44 @@
       return Promise.reject(new Error("no fullscreen"));
     }
 
+    function isLikelyIosWebKit() {
+      var ua = navigator.userAgent || "";
+      if (/iPhone|iPod/.test(ua)) return true;
+      if (/iPad/.test(ua)) return true;
+      if (navigator.maxTouchPoints > 1 && /Macintosh/.test(ua)) return true;
+      return false;
+    }
+
+    function tryFullscreenSyncInGesture() {
+      var candidates = [];
+      if (rotateWrap) candidates.push(rotateWrap);
+      if (canvas) candidates.push(canvas);
+      candidates.push(document.documentElement);
+      for (var i = 0; i < candidates.length; i++) {
+        var el = candidates[i];
+        if (!el) continue;
+        try {
+          if (typeof el.webkitRequestFullscreen === "function") {
+            el.webkitRequestFullscreen();
+            return;
+          }
+          if (typeof el.requestFullscreen === "function") {
+            el.requestFullscreen();
+            return;
+          }
+        } catch (err) {}
+      }
+    }
+
+    function finishGateDismiss() {
+      landscapeGateDismissed = true;
+      if (gate) gate.classList.remove("visible");
+      if (rotateWrap) rotateWrap.style.pointerEvents = "";
+      if (canvas) canvas.style.pointerEvents = "";
+      syncCss90Layout();
+      notifyUnityResizeSoon();
+    }
+
     function tryLockLandscapeAfterFs() {
       var o = screen.orientation || screen.mozOrientation;
       if (!o || !o.lock) return Promise.resolve();
@@ -381,37 +419,34 @@
     function tryEnterLandscapeFromGate() {
       if (gateFsBusy) return;
       gateFsBusy = true;
+
+      if (isLikelyIosWebKit()) {
+        tryFullscreenSyncInGesture();
+        finishGateDismiss();
+        tryLockLandscapeAfterFs().catch(function () {});
+        setTimeout(function () { gateFsBusy = false; }, 450);
+        return;
+      }
+
       requestFs(document.documentElement).then(function () {
         return tryLockLandscapeAfterFs();
-      }).then(function () {
-        landscapeGateDismissed = true;
-        gate.classList.remove("visible");
-        if (rotateWrap) rotateWrap.style.pointerEvents = "";
-        if (canvas) canvas.style.pointerEvents = "";
-        syncCss90Layout();
-        notifyUnityResizeSoon();
-      }).catch(function () {
-        landscapeGateDismissed = true;
-        gate.classList.remove("visible");
-        if (rotateWrap) rotateWrap.style.pointerEvents = "";
-        if (canvas) canvas.style.pointerEvents = "";
-        syncCss90Layout();
-        notifyUnityResizeSoon();
-      }).then(function () {
+      }).then(finishGateDismiss).catch(finishGateDismiss).then(function () {
         setTimeout(function () { gateFsBusy = false; }, 700);
       });
     }
 
     if (gate) {
-      gate.addEventListener("click", function (ev) {
+      var gateActivate = function (ev) {
         ev.preventDefault();
         ev.stopPropagation();
         tryEnterLandscapeFromGate();
-      });
-      gate.addEventListener("touchend", function (ev) {
-        ev.preventDefault();
-        ev.stopPropagation();
-        tryEnterLandscapeFromGate();
+      };
+      gate.addEventListener("click", gateActivate);
+      gate.addEventListener("touchstart", gateActivate, { passive: false });
+      gate.addEventListener("touchend", gateActivate, { passive: false });
+      gate.addEventListener("pointerup", function (ev) {
+        if (ev.isPrimary === false) return;
+        gateActivate(ev);
       }, { passive: false });
       gate.addEventListener("keydown", function (ev) {
         if (ev.key === "Enter" || ev.key === " ") {
