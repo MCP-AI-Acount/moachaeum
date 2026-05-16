@@ -143,6 +143,13 @@
       opacity: 0.72;
       line-height: 1.35;
     }
+    #tap-landscape-gate .load-hint-chrome {
+      margin: 10px 0 0;
+      max-width: 280px;
+      font-size: 12px;
+      line-height: 1.45;
+      opacity: 0.62;
+    }
     #tap-landscape-gate .load-spinner {
       width: 36px;
       height: 36px;
@@ -166,9 +173,10 @@
   <!-- MobilePortraitWebGL: full-screen tap gate. 로딩은 캔버스 뒤, 반투명 오버레이만 표시. -->
   <div id="tap-landscape-gate" aria-live="polite" role="button" tabindex="0" aria-label="화면을 한 번 눌러 계속하기">
     <div class="load-inner">
-      <p class="load-line1">해상도를 조정중입니다.</p>
-      <p class="load-line2">잠시만 기다려주세요</p>
-      <p class="load-line3">화면을 한 번 눌러 주세요</p>
+      <p class="load-line1">화면을 맞추는 중입니다</p>
+      <p class="load-line2">잠시만 기다려 주세요</p>
+      <p class="load-line3">아래 화면을 한 번 눌러 주세요</p>
+      <p class="load-hint-chrome">크롬에서 전체 화면 안내가 잠깐 뜰 수 있어요. 무시하셔도 됩니다.</p>
       <div class="load-spinner" aria-hidden="true"></div>
     </div>
   </div>
@@ -319,7 +327,7 @@
         if (canvas) canvas.style.pointerEvents = "";
         return;
       }
-      if (isPortraitViewport()) {
+      if (isPortraitViewport() && !isDocFullscreen()) {
         gate.classList.add("visible");
         if (rotateWrap) rotateWrap.style.pointerEvents = "none";
         if (canvas) canvas.style.pointerEvents = "none";
@@ -390,9 +398,20 @@
       if (typeof window.resumeUnityWebAudioFromGesture === "function") {
         window.resumeUnityWebAudioFromGesture();
       }
-      finishGateDismiss();
-      tryLockLandscapeAfterFs().catch(function () {});
-      setTimeout(function () { gateFsBusy = false; }, 450);
+
+      if (isLikelyIosWebKit()) {
+        tryFullscreenSyncInGesture();
+        finishGateDismiss();
+        tryLockLandscapeAfterFs().catch(function () {});
+        setTimeout(function () { gateFsBusy = false; }, 450);
+        return;
+      }
+
+      requestFs(document.documentElement).then(function () {
+        return tryLockLandscapeAfterFs();
+      }).then(finishGateDismiss).catch(finishGateDismiss).then(function () {
+        setTimeout(function () { gateFsBusy = false; }, 700);
+      });
     }
 
     if (gate) {
@@ -417,12 +436,6 @@
     }
     document.addEventListener("fullscreenchange", onFsChange);
     document.addEventListener("webkitfullscreenchange", onFsChange);
-
-    if (document.fullscreenElement && document.exitFullscreen) {
-      document.exitFullscreen().catch(function () {});
-    } else if (document.webkitFullscreenElement && document.webkitExitFullscreen) {
-      document.webkitExitFullscreen();
-    }
 
     syncCss90Layout();
     window.addEventListener("resize", syncCss90Layout);
