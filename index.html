@@ -100,62 +100,6 @@
     body.layout-css90 #rotate-hint {
       display: none;
     }
-    #unity-loading-curtain {
-      position: fixed;
-      inset: 0;
-      z-index: 2147483640;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-sizing: border-box;
-      padding: 24px;
-      background: #000;
-      color: #fff;
-      font-family: system-ui, -apple-system, sans-serif;
-      text-align: center;
-      pointer-events: auto;
-      touch-action: none;
-    }
-    #unity-loading-curtain.done {
-      display: none;
-    }
-    .load-inner {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
-      max-width: 280px;
-    }
-    .load-inner .load-line1 {
-      margin: 0;
-      font-size: 17px;
-      font-weight: 600;
-      line-height: 1.35;
-    }
-    .load-inner .load-line2 {
-      margin: 0;
-      font-size: 15px;
-      opacity: 0.88;
-      line-height: 1.4;
-    }
-    .load-inner .load-line3 {
-      margin: 6px 0 0;
-      font-size: 14px;
-      opacity: 0.72;
-      line-height: 1.35;
-    }
-    .load-spinner {
-      width: 36px;
-      height: 36px;
-      margin-top: 14px;
-      border: 3px solid rgba(255,255,255,0.22);
-      border-top-color: rgba(255,255,255,0.95);
-      border-radius: 50%;
-      animation: webgl-load-spin 0.75s linear infinite;
-    }
-    @keyframes webgl-load-spin {
-      to { transform: rotate(360deg); }
-    }
     #tap-landscape-gate {
       display: none;
       position: fixed;
@@ -164,11 +108,12 @@
       align-items: center;
       justify-content: center;
       flex-direction: column;
+      gap: 16px;
       padding: 24px;
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
       box-sizing: border-box;
-      background: #000;
+      background: rgba(0,0,0,0.72);
       color: #fff;
       font-family: system-ui, -apple-system, sans-serif;
       text-align: center;
@@ -183,6 +128,44 @@
     #tap-landscape-gate.visible:focus-visible {
       box-shadow: inset 0 0 0 3px rgba(255,255,255,0.35);
     }
+    #tap-landscape-gate .load-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      max-width: 280px;
+      pointer-events: none;
+    }
+    #tap-landscape-gate .load-line1 {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 600;
+      line-height: 1.35;
+    }
+    #tap-landscape-gate .load-line2 {
+      margin: 0;
+      font-size: 15px;
+      opacity: 0.88;
+      line-height: 1.4;
+    }
+    #tap-landscape-gate .load-line3 {
+      margin: 6px 0 0;
+      font-size: 14px;
+      opacity: 0.72;
+      line-height: 1.35;
+    }
+    #tap-landscape-gate .load-spinner {
+      width: 36px;
+      height: 36px;
+      margin-top: 14px;
+      border: 3px solid rgba(255,255,255,0.22);
+      border-top-color: rgba(255,255,255,0.95);
+      border-radius: 50%;
+      animation: webgl-gate-spin 0.75s linear infinite;
+    }
+    @keyframes webgl-gate-spin {
+      to { transform: rotate(360deg); }
+    }
   </style>
 </head>
 <body>
@@ -191,15 +174,8 @@
       <canvas id="unity-canvas" tabindex="-1"></canvas>
     </div>
   </div>
-  <div id="unity-loading-curtain">
-    <div class="load-inner">
-      <p class="load-line1">해상도를 조정중입니다.</p>
-      <p class="load-line2">잠시만 기다려주세요</p>
-      <div class="load-spinner" aria-hidden="true"></div>
-    </div>
-  </div>
   <div id="rotate-hint">가로로 보려면 기기를 돌리거나 화면을 한 번 눌러 주세요</div>
-  <!-- MobilePortraitWebGL: #unity-loading-curtain + #tap-landscape-gate. 산출물에 없으면 다른 템플릿입니다. -->
+  <!-- MobilePortraitWebGL: full-screen tap gate. 로딩은 캔버스 뒤, 반투명 오버레이만 표시. -->
   <div id="tap-landscape-gate" aria-live="polite" role="button" tabindex="0" aria-label="화면을 한 번 눌러 계속하기">
     <div class="load-inner">
       <p class="load-line1">해상도를 조정중입니다.</p>
@@ -208,7 +184,6 @@
       <div class="load-spinner" aria-hidden="true"></div>
     </div>
   </div>
-  <script src="audio-decode-patch.js"></script>
   <script>
     var qs = location.search || "";
     var useCss90Portrait = !/[?&]css90=0(?:&|$)/.test(qs);
@@ -239,12 +214,6 @@
     var hint = document.querySelector("#rotate-hint");
     var rotateWrap = document.querySelector("#unity-rotate-wrap");
     var gate = document.querySelector("#tap-landscape-gate");
-    var loadingCurtain = document.querySelector("#unity-loading-curtain");
-
-    function hideLoadingCurtain() {
-      if (loadingCurtain) loadingCurtain.classList.add("done");
-    }
-
     var landscapeGateDismissed = false;
     var gateFsBusy = false;
     var unityInstanceRef = null;
@@ -371,6 +340,14 @@
       return Promise.reject(new Error("no fullscreen"));
     }
 
+    function tryLockLandscapeAfterFs() {
+      var o = screen.orientation || screen.mozOrientation;
+      if (!o || !o.lock) return Promise.resolve();
+      return o.lock("landscape-primary").catch(function () {
+        return o.lock("landscape").catch(function () {});
+      });
+    }
+
     function isLikelyIosWebKit() {
       var ua = navigator.userAgent || "";
       if (/iPhone|iPod/.test(ua)) return true;
@@ -407,14 +384,6 @@
       if (canvas) canvas.style.pointerEvents = "";
       syncCss90Layout();
       notifyUnityResizeSoon();
-    }
-
-    function tryLockLandscapeAfterFs() {
-      var o = screen.orientation || screen.mozOrientation;
-      if (!o || !o.lock) return Promise.resolve();
-      return o.lock("landscape-primary").catch(function () {
-        return o.lock("landscape").catch(function () {});
-      });
     }
 
     function tryEnterLandscapeFromGate() {
@@ -485,7 +454,6 @@
     script.src = loaderUrl;
     script.onload = function () {
       createUnityInstance(canvas, config, function () {}).then(function (unityInstance) {
-        hideLoadingCurtain();
         unityInstanceRef = unityInstance;
         updateLandscapeGateVisibility();
 
@@ -505,12 +473,10 @@
           ro.observe(canvas);
         }
       }).catch(function (message) {
-        hideLoadingCurtain();
         alert(message);
       });
     };
     script.onerror = function () {
-      hideLoadingCurtain();
       alert("WebGL 로더를 불러오지 못했습니다. Build 폴더와 빌드 산출물 여부를 확인하세요.");
     };
     document.body.appendChild(script);
