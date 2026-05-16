@@ -319,7 +319,7 @@
         if (canvas) canvas.style.pointerEvents = "";
         return;
       }
-      if (isPortraitViewport() && !isDocFullscreen()) {
+      if (isPortraitViewport()) {
         gate.classList.add("visible");
         if (rotateWrap) rotateWrap.style.pointerEvents = "none";
         if (canvas) canvas.style.pointerEvents = "none";
@@ -390,20 +390,9 @@
       if (typeof window.resumeUnityWebAudioFromGesture === "function") {
         window.resumeUnityWebAudioFromGesture();
       }
-
-      if (isLikelyIosWebKit()) {
-        tryFullscreenSyncInGesture();
-        finishGateDismiss();
-        tryLockLandscapeAfterFs().catch(function () {});
-        setTimeout(function () { gateFsBusy = false; }, 450);
-        return;
-      }
-
-      requestFs(document.documentElement).then(function () {
-        return tryLockLandscapeAfterFs();
-      }).then(finishGateDismiss).catch(finishGateDismiss).then(function () {
-        setTimeout(function () { gateFsBusy = false; }, 700);
-      });
+      finishGateDismiss();
+      tryLockLandscapeAfterFs().catch(function () {});
+      setTimeout(function () { gateFsBusy = false; }, 450);
     }
 
     if (gate) {
@@ -428,6 +417,12 @@
     }
     document.addEventListener("fullscreenchange", onFsChange);
     document.addEventListener("webkitfullscreenchange", onFsChange);
+
+    if (document.fullscreenElement && document.exitFullscreen) {
+      document.exitFullscreen().catch(function () {});
+    } else if (document.webkitFullscreenElement && document.webkitExitFullscreen) {
+      document.webkitExitFullscreen();
+    }
 
     syncCss90Layout();
     window.addEventListener("resize", syncCss90Layout);
