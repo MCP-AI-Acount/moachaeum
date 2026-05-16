@@ -84,21 +84,10 @@
       box-sizing: border-box;
       pointer-events: auto;
     }
-    #rotate-hint {
-      display: none;
-      position: fixed;
-      left: 0;
-      right: 0;
-      bottom: 12px;
-      text-align: center;
-      font-family: system-ui, sans-serif;
-      font-size: 14px;
-      color: rgba(255,255,255,0.85);
-      pointer-events: none;
-      z-index: 1;
-    }
-    body.layout-css90 #rotate-hint {
-      display: none;
+    #rotate-hint,
+    #unity-warning,
+    #unity-fullscreen-button {
+      display: none !important;
     }
     #tap-landscape-gate {
       display: none;
@@ -174,7 +163,6 @@
       <canvas id="unity-canvas" tabindex="-1"></canvas>
     </div>
   </div>
-  <div id="rotate-hint">가로로 보려면 기기를 돌리거나 화면을 한 번 눌러 주세요</div>
   <!-- MobilePortraitWebGL: full-screen tap gate. 로딩은 캔버스 뒤, 반투명 오버레이만 표시. -->
   <div id="tap-landscape-gate" aria-live="polite" role="button" tabindex="0" aria-label="화면을 한 번 눌러 계속하기">
     <div class="load-inner">
@@ -199,10 +187,19 @@
     var dpr = window.devicePixelRatio || 1;
     if (dpr > 2) dpr = 2;
 
+    function unitySuppressBanner(msg, type) {
+      var text = msg != null ? String(msg) : "";
+      if (/github|fullscreen|disabledFullscreen|git\s*server|pages\.github/i.test(text))
+        return;
+      if (type === "error") console.error("[Unity]", text);
+      else if (text) console.warn("[Unity]", text);
+    }
+
     var config = {
       dataUrl: buildUrl + "/Re_Web_59.data",
       frameworkUrl: buildUrl + "/Re_Web_59.framework.js",
       codeUrl: buildUrl + "/Re_Web_59.wasm",
+      showBanner: unitySuppressBanner,
       streamingAssetsUrl: "StreamingAssets",
       companyName: "DefaultCompany",
       productName: "모아채움",
@@ -472,11 +469,13 @@
           ro.observe(canvas);
         }
       }).catch(function (message) {
-        alert(message);
+        var text = message != null ? String(message) : "";
+        if (!/github|fullscreen|disabledFullscreen|git\s*server|pages\.github/i.test(text))
+          console.error("[Unity] load failed:", text);
       });
     };
     script.onerror = function () {
-      alert("WebGL 로더를 불러오지 못했습니다. Build 폴더와 빌드 산출물 여부를 확인하세요.");
+      console.error("WebGL loader script failed. Check Build folder output.");
     };
     document.body.appendChild(script);
   </script>
