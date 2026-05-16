@@ -184,6 +184,7 @@
       <div class="load-spinner" aria-hidden="true"></div>
     </div>
   </div>
+  <script src="audio-decode-patch.js"></script>
   <script>
     var qs = location.search || "";
     var useCss90Portrait = !/[?&]css90=0(?:&|$)/.test(qs);
@@ -389,6 +390,9 @@
     function tryEnterLandscapeFromGate() {
       if (gateFsBusy) return;
       gateFsBusy = true;
+      if (typeof window.resumeUnityWebAudioFromGesture === "function") {
+        window.resumeUnityWebAudioFromGesture();
+      }
 
       if (isLikelyIosWebKit()) {
         tryFullscreenSyncInGesture();
@@ -412,12 +416,7 @@
         tryEnterLandscapeFromGate();
       };
       gate.addEventListener("click", gateActivate);
-      gate.addEventListener("touchstart", gateActivate, { passive: false });
       gate.addEventListener("touchend", gateActivate, { passive: false });
-      gate.addEventListener("pointerup", function (ev) {
-        if (ev.isPrimary === false) return;
-        gateActivate(ev);
-      }, { passive: false });
       gate.addEventListener("keydown", function (ev) {
         if (ev.key === "Enter" || ev.key === " ") {
           ev.preventDefault();
