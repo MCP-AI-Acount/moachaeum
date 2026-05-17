@@ -4,8 +4,8 @@
       "usePhoneNumber": false,
       "usePersonalInfor": false,
       "endLink": [
-        "종료하기",
-        "신청하기"
+        "https://moachaeum.co.kr",
+        ""
    ]
     },
     "appInfor": {
