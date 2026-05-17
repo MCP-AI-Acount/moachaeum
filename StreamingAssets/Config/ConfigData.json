@@ -11,6 +11,7 @@
     "appInfor": {
       "maskTime": 0.5,
       "sign": "Icon",
+      "useRandomQuestion": true,
       "usePoolingSystem": false,
       "mustSolve": true,
       "coreQCount": 13,
